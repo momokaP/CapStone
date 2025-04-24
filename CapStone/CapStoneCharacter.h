@@ -48,18 +48,6 @@ class ACapStoneCharacter : public ACharacter
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* SprintAction;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
-	UInputAction* NumAction;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
-	UInputAction* PlusMinusAction;
-
-	UFUNCTION(BlueprintCallable)
-	FRotator GetUpperArm_r();
-	UFUNCTION(BlueprintCallable)
-	FRotator GetLowerArm_r();
-	UFUNCTION(BlueprintCallable)
-	FRotator GetHand_r();
-
 public:
 	ACapStoneCharacter();
 
@@ -75,32 +63,6 @@ protected:
 
 	void StartSprint();
 	void StopSprint();
-
-	void HandleRotationInput(const FInputActionValue& Value);
-
-	void HandlePlusMinus(const FInputActionValue& Value);
-
-	void RotateUpperArm_r(float x, float y, float z);
-	void RotateLowerArm_r(float x, float y, float z);
-	void RotateHand_r(float x, float y, float z);
-
-	void OnWeaponOverlap(
-		UPrimitiveComponent* OverlappedComponent,
-		AActor* OtherActor,
-		UPrimitiveComponent* OtherComp,
-		int32 OtherBodyIndex,
-		bool bFromSweep,
-		const FHitResult& SweepResult
-	);
-
-	UFUNCTION()
-	void OnWeaponHit(
-		UPrimitiveComponent* HitComponent, 
-		AActor* OtherActor,
-        UPrimitiveComponent* OtherComp, 
-		FVector NormalImpulse, 
-		const FHitResult& Hit
-	);
 
 protected:
 	virtual void BeginPlay() override;
@@ -118,12 +80,11 @@ public:
 private:
 	float DefaultWalkSpeed = 250.f;
 	float SprintSpeed = 500.f;  // 달리기 속도
-	float RotationAmount = 1.f;
 
-	FRotator UpperArm_r = FRotator(0, 0, 0);
-	FRotator LowerArm_r = FRotator(0, 0, 0);
-	FRotator Hand_r = FRotator(0, 0, 0);
+	UPROPERTY(EditDefaultsOnly, Category = "Weapon")
+	TSubclassOf<class AWeapon> HandRight;
 
-	bool bSwordBlocked = false;
+	UPROPERTY(EditDefaultsOnly, Category = "Weapon")
+	TSubclassOf<class AWeapon> LeftRight;
 };
 
