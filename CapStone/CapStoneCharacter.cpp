@@ -53,6 +53,15 @@ ACapStoneCharacter::ACapStoneCharacter()
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName); // Attach the camera to the end of the boom and let the boom adjust to match the controller orientation
 	FollowCamera->bUsePawnControlRotation = false; // Camera does not rotate relative to arm
 
+	RightPoint = CreateDefaultSubobject<USceneComponent>(TEXT("RightPoint"));
+	RightPoint->SetupAttachment(GetMesh());
+	LeftPoint = CreateDefaultSubobject<USceneComponent>(TEXT("LeftPoint"));
+	LeftPoint->SetupAttachment(GetMesh());
+
+	RightHandle = CreateDefaultSubobject<UPhysicsHandleComponent>(TEXT("RightHandle"));
+	LeftHandle = CreateDefaultSubobject<UPhysicsHandleComponent>(TEXT("LeftHandle"));
+    PhysicalAnim = CreateDefaultSubobject<UPhysicalAnimationComponent>(TEXT("PhysicalAnim"));
+
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
 	// are set in the derived blueprint asset named ThirdPersonCharacter (to avoid direct content references in C++)
 }
@@ -151,29 +160,110 @@ void ACapStoneCharacter::BeginPlay()
 	FVector HandRightLocation = HandRightTransform.GetLocation();
     FRotator HandRightRotation = HandRightTransform.GetRotation().Rotator();
 
+	FName hand_l = TEXT("hand_l");
+	FTransform HandLeftTransform = GetMesh()->GetSocketTransform(hand_l, ERelativeTransformSpace::RTS_World);
+	FVector HandLeftLocation = HandLeftTransform.GetLocation();
+    FRotator HandLeftRotation = HandLeftTransform.GetRotation().Rotator();
+
 	FActorSpawnParameters SpawnParams;
     SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::Undefined;
 
 	if (HandRight)
 	{
 		AActor* HandRightActor = GetWorld()->SpawnActor<AWeapon>(HandRight, HandRightLocation, HandRightRotation, SpawnParams);
-
 		if (HandRightActor)
 		{
 			HandRightActor->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetIncludingScale, FName("hand_rSocket"));
 		}
-
-		UE_LOG(LogTemp, Error, TEXT("HandRight is valid"));
 	}
 	else
 	{
 		UE_LOG(LogTemp, Error, TEXT("HandRight is invalid or not an Actor class"));
 	}
+
+	if (HandLeft)
+	{
+		AActor* HandLeftActor = GetWorld()->SpawnActor<AWeapon>(HandLeft, HandLeftLocation, HandLeftRotation, SpawnParams);
+		if (HandLeftActor)
+		{
+			HandLeftActor->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetIncludingScale, FName("hand_lSocket"));
+		}
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("HandLeft is invalid or not an Actor class"));
+	}
+
+	RightPoint->SetWorldLocation(GetMesh()->GetSocketLocation(hand_r));
+	RightHandle->GrabComponentAtLocationWithRotation(
+		GetMesh(),
+		hand_r,
+		RightPoint->GetComponentLocation(),
+		FRotator::ZeroRotator
+	);
+
+	LeftPoint->SetWorldLocation(GetMesh()->GetSocketLocation(hand_l));
+	LeftHandle->GrabComponentAtLocationWithRotation(
+		GetMesh(),
+		hand_l,
+		LeftPoint->GetComponentLocation(),
+		FRotator::ZeroRotator
+	);
+
+	FName Pelvis = TEXT("pelvis");
+	FName ProfileTest = TEXT("Test");
+	PhysicalAnim->SetSkeletalMeshComponent(GetMesh());
+	PhysicalAnim->ApplyPhysicalAnimationProfileBelow(Pelvis, ProfileTest, true, false);
+	GetMesh()->SetAllBodiesBelowSimulatePhysics(Pelvis, true, false); 
+
+	FName foot_r = TEXT("foot_r");
+	FName foot_l = TEXT("foot_l");
+	FName spine_03 = TEXT("spine_03");
+	FName neck_02 = TEXT("neck_02");
+	GetMesh()->SetBodySimulatePhysics(foot_r, false);
+	GetMesh()->SetBodySimulatePhysics(foot_l, false);
+	GetMesh()->SetBodySimulatePhysics(spine_03, false);
+	GetMesh()->SetBodySimulatePhysics(neck_02, false);
+
 }
 
 // Called every frame
 void ACapStoneCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+
+	RightHandle->SetTargetLocationAndRotation(
+		RightPoint->GetComponentLocation(),
+		FRotator::ZeroRotator
+	);
+
+	LeftHandle->SetTargetLocationAndRotation(
+		LeftPoint->GetComponentLocation(),
+		FRotator::ZeroRotator
+	);
+
+	DrawDebugSphere(
+		GetWorld(),             // 월드 컨텍스트
+		LeftPoint->GetComponentLocation(),     // 중심 위치
+		5.0f,                  // 반지름
+		12,                    // 세그먼트 수 (자세함 정도)
+		FColor::Blue,            // 색상
+		false,                  // 지속 여부 (true면 계속 표시)
+		0.0f,                   // 지속 시간 (false일 때만 유효)
+		0,                      // 깊이 우선순위
+		0.0f                    // 선 두께
+	);
+
+	DrawDebugSphere(
+		GetWorld(),             // 월드 컨텍스트
+		RightPoint->GetComponentLocation(),     // 중심 위치
+		5.0f,                  // 반지름
+		12,                    // 세그먼트 수 (자세함 정도)
+		FColor::Red,            // 색상
+		false,                  // 지속 여부 (true면 계속 표시)
+		0.0f,                   // 지속 시간 (false일 때만 유효)
+		0,                      // 깊이 우선순위
+		0.0f                    // 선 두께
+	);
 }
 
