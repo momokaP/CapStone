@@ -81,6 +81,8 @@ class ACapStoneCharacter : public ACharacter
 
 	FConstraintInstance* RightConstraint;
 
+	UBoxComponent* WeaponCollider;
+
 public:
 	ACapStoneCharacter();
 
@@ -100,6 +102,12 @@ protected:
 
 	void StartSprint();
 	void StopSprint();
+
+	UFUNCTION()
+	void OnMeshHit(
+		UPrimitiveComponent* HitComp, AActor* OtherActor,
+		UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit
+	);
 
 protected:
 	virtual void BeginPlay() override;
@@ -129,6 +137,7 @@ private:
 	float DefaultWalkSpeed = 250.f;
 	float SprintSpeed = 500.f;  // 달리기 속도
 	float MoveAmount = 1.f;
+	float MaxRange = 1.f;
 
 	// 얘네들 c++에서 생성하려면 에디터 완전히 닫고 컴파일, 빌드 해야 함
 	UPROPERTY(EditDefaultsOnly, Category = "Weapon")

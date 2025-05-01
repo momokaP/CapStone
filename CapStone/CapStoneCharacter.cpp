@@ -26,11 +26,11 @@ ACapStoneCharacter::ACapStoneCharacter()
 		
 	// Don't rotate when the controller rotates. Let that just affect the camera.
 	bUseControllerRotationPitch = false;
-	bUseControllerRotationYaw = false;
+	bUseControllerRotationYaw = true;
 	bUseControllerRotationRoll = false;
 
 	// Configure character movement
-	GetCharacterMovement()->bOrientRotationToMovement = true; // Character moves in the direction of input...	
+	GetCharacterMovement()->bOrientRotationToMovement = false; // Character moves in the direction of input...	
 	GetCharacterMovement()->RotationRate = FRotator(0.0f, 500.0f, 0.0f); // ...at this rotation rate
 
 	// Note: For faster iteration times these variables, and many more, can be tweaked in the Character Blueprint
@@ -120,6 +120,11 @@ void ACapStoneCharacter::Move(const FInputActionValue& Value)
 {
 	// input is a Vector2D
 	FVector2D MovementVector = Value.Get<FVector2D>();
+	//UE_LOG(LogTemp, Warning, TEXT("MovementVector: X=%f, Y=%f"), MovementVector.X, MovementVector.Y);
+
+	if(MovementVector.X==1.f || MovementVector.X==-1.f){
+		return;
+	}
 
 	if (Controller != nullptr)
 	{
@@ -134,7 +139,15 @@ void ACapStoneCharacter::Move(const FInputActionValue& Value)
 		const FVector RightDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
 
 		// add movement 
-		AddMovementInput(ForwardDirection, MovementVector.Y);
+		if(MovementVector.Y>0)
+		{
+			AddMovementInput(ForwardDirection, MovementVector.Y);
+		}
+		else
+		{
+			AddMovementInput(ForwardDirection, MovementVector.Y);
+		}
+		
 		AddMovementInput(RightDirection, MovementVector.X);
 	}
 }
@@ -196,15 +209,22 @@ void ACapStoneCharacter::HandleRotationInput(const FInputActionValue& Value)
                     {
                         int32 KeyIndex = KeyMap[KeyName];
 
+						FVector Origin = GetMesh()->GetSocketLocation("neck_01");
+						FVector RightOffset;
+						FVector LeftOffset;
+
+						bool bApplyRightOffset = false;
+						bool bApplyLeftOffset = false;
+
 						switch (KeyIndex)
                         {
-                        case 1: RightPoint->AddLocalOffset(FVector(MoveAmount, 0, 0)); break;
-                        case 2: RightPoint->AddLocalOffset(FVector(0, MoveAmount, 0)); break;
-                        case 3: RightPoint->AddLocalOffset(FVector(0, 0, MoveAmount)); break;
+						case 1: RightOffset = FVector(MoveAmount, 0, 0); bApplyRightOffset = true; break;
+						case 2: RightOffset = FVector(0, MoveAmount, 0); bApplyRightOffset = true; break;
+						case 3: RightOffset = FVector(0, 0, MoveAmount); bApplyRightOffset = true; break;
 
-                        case 4: LeftPoint->AddLocalOffset(FVector(MoveAmount, 0, 0)); break;
-                        case 5: LeftPoint->AddLocalOffset(FVector(0, MoveAmount, 0)); break;
-                        case 6: LeftPoint->AddLocalOffset(FVector(0, 0, MoveAmount)); break;
+                        case 4: LeftOffset = FVector(MoveAmount, 0, 0); bApplyLeftOffset = true; break;
+                        case 5: LeftOffset = FVector(0, MoveAmount, 0); bApplyLeftOffset = true; break;
+                        case 6: LeftOffset = FVector(0, 0, MoveAmount); bApplyLeftOffset = true; break;
 
 						case 7: RightPoint->AddLocalRotation(FRotator(MoveAmount, 0, 0)); break;
 						case 8: RightPoint->AddLocalRotation(FRotator(0, MoveAmount, 0)); break;
@@ -214,6 +234,26 @@ void ACapStoneCharacter::HandleRotationInput(const FInputActionValue& Value)
                             UE_LOG(LogTemp, Warning, TEXT("Invalid Key: %s"), *KeyName);
                             break;
                         }
+
+						if (bApplyRightOffset)
+						{
+							FVector NewLocation = RightPoint->GetComponentLocation() + RightPoint->GetComponentTransform().TransformVector(RightOffset);
+							float NewDistance = FVector::Dist(Origin, NewLocation);
+							if (NewDistance <= MaxRange)
+							{
+								RightPoint->AddLocalOffset(RightOffset);
+							}
+						}
+
+						if (bApplyLeftOffset)
+						{
+							FVector NewLocation = LeftPoint->GetComponentLocation() + LeftPoint->GetComponentTransform().TransformVector(LeftOffset);
+							float NewDistance = FVector::Dist(Origin, NewLocation);
+							if (NewDistance <= MaxRange)
+							{
+								LeftPoint->AddLocalOffset(LeftOffset);
+							}
+						}
 					}
                 }
             }
@@ -232,6 +272,9 @@ void ACapStoneCharacter::HandlePlusMinus(const FInputActionValue& Value){
 void ACapStoneCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+	
+	// GetMesh()->SetNotifyRigidBodyCollision(true);
+	// GetMesh()->OnComponentHit.AddDynamic(this, &ACapStoneCharacter::OnMeshHit);
 
 	FTransform HandRightTransform = GetMesh()->GetSocketTransform(hand_r, ERelativeTransformSpace::RTS_World);
 	FVector HandRightLocation = HandRightTransform.GetLocation();
@@ -246,11 +289,16 @@ void ACapStoneCharacter::BeginPlay()
 
 	if (HandRight)
 	{
-		AActor* HandRightActor = GetWorld()->SpawnActor<AWeapon>(HandRight, HandRightLocation, HandRightRotation, SpawnParams);
+		AWeapon* HandRightActor = GetWorld()->SpawnActor<AWeapon>(HandRight, HandRightLocation, HandRightRotation, SpawnParams);
 		if (HandRightActor)
 		{
 			HandRightActor->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetIncludingScale, FName("hand_rSocket"));
 		}
+		
+		if (HandRightActor->BoxComponent)
+        {
+            HandRightActor->BoxComponent->OnComponentHit.AddDynamic(this, &ACapStoneCharacter::OnMeshHit);
+        }
 	}
 	else
 	{
@@ -259,7 +307,7 @@ void ACapStoneCharacter::BeginPlay()
 
 	if (HandLeft)
 	{
-		AActor* HandLeftActor = GetWorld()->SpawnActor<AWeapon>(HandLeft, HandLeftLocation, HandLeftRotation, SpawnParams);
+		AWeapon* HandLeftActor = GetWorld()->SpawnActor<AWeapon>(HandLeft, HandLeftLocation, HandLeftRotation, SpawnParams);
 		if (HandLeftActor)
 		{
 			HandLeftActor->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetIncludingScale, FName("hand_lSocket"));
@@ -305,6 +353,16 @@ void ACapStoneCharacter::BeginPlay()
 	GetMesh()->SetBodySimulatePhysics(spine_03, false);
 	GetMesh()->SetBodySimulatePhysics(neck_02, false);
 
+	const FVector HandLoc = GetMesh()->GetSocketLocation("hand_r"); 
+	const FVector LowerarmLoc = GetMesh()->GetSocketLocation("lowerarm_r");
+	const FVector UpperarmLoc = GetMesh()->GetSocketLocation("upperarm_r");
+
+	float ArmLength1 = FVector::Dist(LowerarmLoc, HandLoc);
+	float ArmLength2 = FVector::Dist(LowerarmLoc, UpperarmLoc);
+	float ArmLength = ArmLength1 + ArmLength2;
+
+	MaxRange = ArmLength * 4.f;
+
 }
 
 // Called every frame
@@ -346,16 +404,6 @@ void ACapStoneCharacter::Tick(float DeltaTime)
 		0.0f                    // 선 두께
 	);
 
-	const FVector HandLoc = GetMesh()->GetSocketLocation("hand_r"); 
-	const FVector LowerarmLoc = GetMesh()->GetSocketLocation("lowerarm_r");
-	const FVector UpperarmLoc = GetMesh()->GetSocketLocation("upperarm_r");
-
-	float ArmLength1 = FVector::Dist(LowerarmLoc, HandLoc);
-	float ArmLength2 = FVector::Dist(LowerarmLoc, UpperarmLoc);
-	float ArmLength = ArmLength1 + ArmLength2;
-
-	float MaxRange = ArmLength * 4.f;
-
 	DrawDebugSphere(
 		GetWorld(),             // 월드 컨텍스트
 		GetMesh()->GetSocketLocation("neck_01"),     // 중심 위치
@@ -384,5 +432,31 @@ void ACapStoneCharacter::Tick(float DeltaTime)
     DrawDebugLine(GetWorld(), BoneLocation, BoneLocation + Right   * LineLength, FColor::Green, false, -1.f, 0, 2.f);
     DrawDebugLine(GetWorld(), BoneLocation, BoneLocation + Up      * LineLength, FColor::Blue, false, -1.f, 0, 2.f);
 
+}
+
+void ACapStoneCharacter::OnMeshHit(UPrimitiveComponent* HitComp, AActor* OtherActor,
+    UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
+{
+	if (OtherActor && OtherActor != this)
+    {
+		FName HitBone = Hit.BoneName;
+        if (HitBone != "hand_r" && HitBone != "hand_l")
+        {
+			UE_LOG(LogTemp, Warning, TEXT("=== OnMeshHit Called ==="));
+			UE_LOG(LogTemp, Warning, TEXT("HitComp: %s"), *HitComp->GetName());
+			UE_LOG(LogTemp, Warning, TEXT("OtherActor: %s"), *OtherActor->GetName());
+			UE_LOG(LogTemp, Warning, TEXT("Hit BoneName: %s"), *Hit.BoneName.ToString());
+			// UE_LOG(LogTemp, Warning, TEXT("Hit !!!!!"));
+			// UE_LOG(LogTemp, Warning, TEXT("BoneName: %s"), *GetMesh()->FindClosestBone(Hit.ImpactPoint).ToString());
+			
+			/*
+			UE_LOG(LogTemp, Warning, TEXT("OtherComp: %s"), *OtherComp->GetName());
+			UE_LOG(LogTemp, Warning, TEXT("NormalImpulse: %s"), *NormalImpulse.ToString());
+			UE_LOG(LogTemp, Warning, TEXT("Hit Location: %s"), *Hit.ImpactPoint.ToString());
+			UE_LOG(LogTemp, Warning, TEXT("Hit Component: %s"), *GetNameSafe(Hit.GetComponent()));
+			UE_LOG(LogTemp, Warning, TEXT("Hit Actor: %s"), *GetNameSafe(Hit.GetActor()));
+			*/
+		}
+    }
 }
 
