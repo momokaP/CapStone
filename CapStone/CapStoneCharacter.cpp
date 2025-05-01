@@ -55,11 +55,17 @@ ACapStoneCharacter::ACapStoneCharacter()
 
 	RightPoint = CreateDefaultSubobject<USceneComponent>(TEXT("RightPoint"));
 	RightPoint->SetupAttachment(GetMesh());
+	RightElbowPoint = CreateDefaultSubobject<USceneComponent>(TEXT("RightElbowPoint"));
+	RightElbowPoint->SetupAttachment(GetMesh());
 	LeftPoint = CreateDefaultSubobject<USceneComponent>(TEXT("LeftPoint"));
 	LeftPoint->SetupAttachment(GetMesh());
+	LeftElbowPoint = CreateDefaultSubobject<USceneComponent>(TEXT("LeftElbowPoint"));
+	LeftElbowPoint->SetupAttachment(GetMesh());
 
 	RightHandle = CreateDefaultSubobject<UPhysicsHandleComponent>(TEXT("RightHandle"));
+	RightElbowHandle = CreateDefaultSubobject<UPhysicsHandleComponent>(TEXT("RightElbowHandle"));
 	LeftHandle = CreateDefaultSubobject<UPhysicsHandleComponent>(TEXT("LeftHandle"));
+	LeftElbowHandle = CreateDefaultSubobject<UPhysicsHandleComponent>(TEXT("LeftElbowHandle"));
     PhysicalAnim = CreateDefaultSubobject<UPhysicalAnimationComponent>(TEXT("PhysicalAnim"));
 
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
@@ -98,6 +104,11 @@ void ACapStoneCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputC
 		// Sprint
 		EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Started, this, &ACapStoneCharacter::StartSprint);
 		EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Completed, this, &ACapStoneCharacter::StopSprint);
+	
+		// Number
+		EnhancedInputComponent->BindAction(NumAction, ETriggerEvent::Triggered, this, &ACapStoneCharacter::HandleRotationInput);
+		// +, -
+		EnhancedInputComponent->BindAction(PlusMinusAction, ETriggerEvent::Started, this, &ACapStoneCharacter::HandlePlusMinus);
 	}
 	else
 	{
@@ -151,16 +162,81 @@ void ACapStoneCharacter::StopSprint()
 	GetCharacterMovement()->MaxWalkSpeed = DefaultWalkSpeed;  // 다시 원래 속도(500.f)로 복귀
 }
 
+void ACapStoneCharacter::HandleRotationInput(const FInputActionValue& Value)
+{
+    // 입력 값 가져오기
+    float InputValue = Value.Get<float>();
+
+    // 입력이 0이면 (누르지 않은 상태) 무시
+    if (FMath::IsNearlyZero(InputValue))
+    {
+        return;
+    }
+
+	// 문자열을 숫자로 변환하는 맵
+    static TMap<FString, int32> KeyMap = {
+        { "One", 1 }, { "Two", 2 }, { "Three", 3 },
+        { "Four", 4 }, { "Five", 5 }, { "Six", 6 },
+        { "Seven", 7 }, { "Eight", 8 }, { "Nine", 9 }
+    };
+
+    if (const APlayerController* PC = Cast<APlayerController>(GetController()))
+    {
+        if (const UEnhancedInputLocalPlayerSubsystem* InputSubsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PC->GetLocalPlayer()))
+        {
+            // NumAction에 매핑된 모든 키 가져오기
+            TArray<FKey> BoundKeys = InputSubsystem->QueryKeysMappedToAction(NumAction);
+
+            for (const FKey& Key : BoundKeys)
+            {
+                if (PC->IsInputKeyDown(Key))
+                {
+					FString KeyName = Key.ToString();
+					if (KeyMap.Contains(KeyName))
+                    {
+                        int32 KeyIndex = KeyMap[KeyName];
+
+						switch (KeyIndex)
+                        {
+                        case 1: RightPoint->AddLocalOffset(FVector(MoveAmount, 0, 0)); break;
+                        case 2: RightPoint->AddLocalOffset(FVector(0, MoveAmount, 0)); break;
+                        case 3: RightPoint->AddLocalOffset(FVector(0, 0, MoveAmount)); break;
+
+                        case 4: LeftPoint->AddLocalOffset(FVector(MoveAmount, 0, 0)); break;
+                        case 5: LeftPoint->AddLocalOffset(FVector(0, MoveAmount, 0)); break;
+                        case 6: LeftPoint->AddLocalOffset(FVector(0, 0, MoveAmount)); break;
+
+						case 7: RightPoint->AddLocalRotation(FRotator(MoveAmount, 0, 0)); break;
+						case 8: RightPoint->AddLocalRotation(FRotator(0, MoveAmount, 0)); break;
+						case 9: RightPoint->AddLocalRotation(FRotator(0, 0, MoveAmount)); break;
+
+                        default:
+                            UE_LOG(LogTemp, Warning, TEXT("Invalid Key: %s"), *KeyName);
+                            break;
+                        }
+					}
+                }
+            }
+        }
+    }
+}
+
+void ACapStoneCharacter::HandlePlusMinus(const FInputActionValue& Value){
+	float InputValue = Value.Get<float>();
+	UE_LOG(LogTemp, Log, TEXT("MoveAmount: %f"), MoveAmount);
+
+	MoveAmount = -MoveAmount;
+}
+
+
 void ACapStoneCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
-	FName hand_r = TEXT("hand_r");
 	FTransform HandRightTransform = GetMesh()->GetSocketTransform(hand_r, ERelativeTransformSpace::RTS_World);
 	FVector HandRightLocation = HandRightTransform.GetLocation();
     FRotator HandRightRotation = HandRightTransform.GetRotation().Rotator();
 
-	FName hand_l = TEXT("hand_l");
 	FTransform HandLeftTransform = GetMesh()->GetSocketTransform(hand_l, ERelativeTransformSpace::RTS_World);
 	FVector HandLeftLocation = HandLeftTransform.GetLocation();
     FRotator HandLeftRotation = HandLeftTransform.GetRotation().Rotator();
@@ -194,20 +270,24 @@ void ACapStoneCharacter::BeginPlay()
 		UE_LOG(LogTemp, Error, TEXT("HandLeft is invalid or not an Actor class"));
 	}
 
-	RightPoint->SetWorldLocation(GetMesh()->GetSocketLocation(hand_r));
+	RightPoint->SetWorldLocation(GetMesh()->GetSocketLocation(hand_rSocket));
+	RightPoint->SetWorldRotation(FRotator::ZeroRotator);
+
 	RightHandle->GrabComponentAtLocationWithRotation(
 		GetMesh(),
 		hand_r,
 		RightPoint->GetComponentLocation(),
-		FRotator::ZeroRotator
+		RightPoint->GetComponentRotation()
 	);
 
-	LeftPoint->SetWorldLocation(GetMesh()->GetSocketLocation(hand_l));
+	LeftPoint->SetWorldLocation(GetMesh()->GetSocketLocation(hand_lSocket));
+	LeftPoint->SetWorldRotation(FRotator::ZeroRotator);
+
 	LeftHandle->GrabComponentAtLocationWithRotation(
 		GetMesh(),
 		hand_l,
 		LeftPoint->GetComponentLocation(),
-		FRotator::ZeroRotator
+		LeftPoint->GetComponentRotation()
 	);
 
 	FName Pelvis = TEXT("pelvis");
@@ -234,12 +314,12 @@ void ACapStoneCharacter::Tick(float DeltaTime)
 
 	RightHandle->SetTargetLocationAndRotation(
 		RightPoint->GetComponentLocation(),
-		FRotator::ZeroRotator
+		RightPoint->GetComponentRotation()
 	);
 
 	LeftHandle->SetTargetLocationAndRotation(
 		LeftPoint->GetComponentLocation(),
-		FRotator::ZeroRotator
+		LeftPoint->GetComponentRotation()
 	);
 
 	DrawDebugSphere(
@@ -265,5 +345,44 @@ void ACapStoneCharacter::Tick(float DeltaTime)
 		0,                      // 깊이 우선순위
 		0.0f                    // 선 두께
 	);
+
+	const FVector HandLoc = GetMesh()->GetSocketLocation("hand_r"); 
+	const FVector LowerarmLoc = GetMesh()->GetSocketLocation("lowerarm_r");
+	const FVector UpperarmLoc = GetMesh()->GetSocketLocation("upperarm_r");
+
+	float ArmLength1 = FVector::Dist(LowerarmLoc, HandLoc);
+	float ArmLength2 = FVector::Dist(LowerarmLoc, UpperarmLoc);
+	float ArmLength = ArmLength1 + ArmLength2;
+
+	float MaxRange = ArmLength * 4.f;
+
+	DrawDebugSphere(
+		GetWorld(),             // 월드 컨텍스트
+		GetMesh()->GetSocketLocation("neck_01"),     // 중심 위치
+		MaxRange,                  // 반지름
+		32,                    // 세그먼트 수 (자세함 정도)
+		FColor::Green,            // 색상
+		false,                  // 지속 여부 (true면 계속 표시)
+		0.0f,                   // 지속 시간 (false일 때만 유효)
+		0,                      // 깊이 우선순위
+		0.0f                    // 선 두께
+	);
+
+	FTransform HandRightTransform = GetMesh()->GetSocketTransform(hand_r, ERelativeTransformSpace::RTS_World);
+	FVector BoneLocation = HandRightTransform.GetLocation();
+    FRotator BoneRotation = HandRightTransform.GetRotation().Rotator();
+
+    FRotationMatrix RotMatrix(BoneRotation);
+
+    FVector Forward = RotMatrix.GetUnitAxis(EAxis::X); // 빨강: +X (Forward)
+    FVector Right   = RotMatrix.GetUnitAxis(EAxis::Y); // 초록: +Y (Right)
+    FVector Up      = RotMatrix.GetUnitAxis(EAxis::Z); // 파랑: +Z (Up)
+
+    float LineLength = 20.f;
+
+    DrawDebugLine(GetWorld(), BoneLocation, BoneLocation + Forward * LineLength, FColor::Red, false, -1.f, 0, 2.f);
+    DrawDebugLine(GetWorld(), BoneLocation, BoneLocation + Right   * LineLength, FColor::Green, false, -1.f, 0, 2.f);
+    DrawDebugLine(GetWorld(), BoneLocation, BoneLocation + Up      * LineLength, FColor::Blue, false, -1.f, 0, 2.f);
+
 }
 

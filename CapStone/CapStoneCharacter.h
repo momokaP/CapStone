@@ -7,6 +7,7 @@
 #include "Components/CapsuleComponent.h"
 #include "PhysicsEngine/PhysicsHandleComponent.h"
 #include "PhysicsEngine/PhysicalAnimationComponent.h"
+#include "PhysicsEngine/ConstraintInstance.h"
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
@@ -50,20 +51,35 @@ class ACapStoneCharacter : public ACharacter
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* SprintAction;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* NumAction;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* PlusMinusAction;
+
 	UPROPERTY(VisibleAnywhere)
 	USceneComponent* RightPoint;
+	UPROPERTY(VisibleAnywhere)
+	USceneComponent* RightElbowPoint;
 
 	UPROPERTY(VisibleAnywhere)
 	USceneComponent* LeftPoint;
+	UPROPERTY(VisibleAnywhere)
+	USceneComponent* LeftElbowPoint;
 
 	UPROPERTY(VisibleAnywhere)
 	UPhysicsHandleComponent* RightHandle;
+	UPROPERTY(VisibleAnywhere)
+	UPhysicsHandleComponent* RightElbowHandle;
 
 	UPROPERTY(VisibleAnywhere)
 	UPhysicsHandleComponent* LeftHandle;
+	UPROPERTY(VisibleAnywhere)
+	UPhysicsHandleComponent* LeftElbowHandle;
 
 	UPROPERTY(VisibleAnywhere)
 	UPhysicalAnimationComponent* PhysicalAnim;
+
+	FConstraintInstance* RightConstraint;
 
 public:
 	ACapStoneCharacter();
@@ -77,6 +93,10 @@ protected:
 
 	/** Called for looking input */
 	void Look(const FInputActionValue& Value);
+
+	void HandleRotationInput(const FInputActionValue& Value);
+
+	void HandlePlusMinus(const FInputActionValue& Value);
 
 	void StartSprint();
 	void StopSprint();
@@ -95,8 +115,20 @@ public:
 	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
 
 private:
+	FName hand_rSocket = TEXT("hand_rSocket");
+	FName hand_r = TEXT("hand_r");
+	FName lowerarm_r = TEXT("lowerarm_r");
+
+	FName hand_lSocket = TEXT("hand_lSocket");
+	FName hand_l = TEXT("hand_l");
+	FName lowerarm_l = TEXT("lowerarm_l");
+
+	FRotator RightRotator = FRotator::ZeroRotator;
+	FRotator LeftRotator = FRotator::ZeroRotator;
+
 	float DefaultWalkSpeed = 250.f;
 	float SprintSpeed = 500.f;  // 달리기 속도
+	float MoveAmount = 1.f;
 
 	// 얘네들 c++에서 생성하려면 에디터 완전히 닫고 컴파일, 빌드 해야 함
 	UPROPERTY(EditDefaultsOnly, Category = "Weapon")
