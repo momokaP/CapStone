@@ -56,25 +56,17 @@ class ACapStoneCharacter : public ACharacter
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* PlusMinusAction;
 
-	UPROPERTY(VisibleAnywhere)
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	USceneComponent* RightPoint;
-	UPROPERTY(VisibleAnywhere)
-	USceneComponent* RightElbowPoint;
 
-	UPROPERTY(VisibleAnywhere)
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	USceneComponent* LeftPoint;
-	UPROPERTY(VisibleAnywhere)
-	USceneComponent* LeftElbowPoint;
 
-	UPROPERTY(VisibleAnywhere)
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	UPhysicsHandleComponent* RightHandle;
-	UPROPERTY(VisibleAnywhere)
-	UPhysicsHandleComponent* RightElbowHandle;
 
-	UPROPERTY(VisibleAnywhere)
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	UPhysicsHandleComponent* LeftHandle;
-	UPROPERTY(VisibleAnywhere)
-	UPhysicsHandleComponent* LeftElbowHandle;
 
 	UPROPERTY(VisibleAnywhere)
 	UPhysicalAnimationComponent* PhysicalAnim;
@@ -83,6 +75,13 @@ class ACapStoneCharacter : public ACharacter
 
 	UBoxComponent* WeaponCollider;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	bool bIsHit = false;
+
+	float HitDuration = 0.2f;	
+
+	FTimerHandle HitResetTimerHandle;
+
 public:
 	ACapStoneCharacter();
 
@@ -90,6 +89,13 @@ public:
 	virtual void Tick(float DeltaTime) override;
 
 protected:
+	void ResetHitState();
+
+	UFUNCTION(BlueprintCallable)	
+	void RLMove(FVector2D MovementVector);
+	UFUNCTION(BlueprintCallable)	
+	void RLLook(FVector2D LookAxisVector);
+
 	/** Called for movement input */
 	void Move(const FInputActionValue& Value);
 

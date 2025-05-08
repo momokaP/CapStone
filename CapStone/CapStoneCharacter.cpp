@@ -26,7 +26,7 @@ ACapStoneCharacter::ACapStoneCharacter()
 		
 	// Don't rotate when the controller rotates. Let that just affect the camera.
 	bUseControllerRotationPitch = false;
-	bUseControllerRotationYaw = true;
+	bUseControllerRotationYaw = false;
 	bUseControllerRotationRoll = false;
 
 	// Configure character movement
@@ -55,17 +55,12 @@ ACapStoneCharacter::ACapStoneCharacter()
 
 	RightPoint = CreateDefaultSubobject<USceneComponent>(TEXT("RightPoint"));
 	RightPoint->SetupAttachment(GetMesh());
-	RightElbowPoint = CreateDefaultSubobject<USceneComponent>(TEXT("RightElbowPoint"));
-	RightElbowPoint->SetupAttachment(GetMesh());
 	LeftPoint = CreateDefaultSubobject<USceneComponent>(TEXT("LeftPoint"));
 	LeftPoint->SetupAttachment(GetMesh());
-	LeftElbowPoint = CreateDefaultSubobject<USceneComponent>(TEXT("LeftElbowPoint"));
-	LeftElbowPoint->SetupAttachment(GetMesh());
+
 
 	RightHandle = CreateDefaultSubobject<UPhysicsHandleComponent>(TEXT("RightHandle"));
-	RightElbowHandle = CreateDefaultSubobject<UPhysicsHandleComponent>(TEXT("RightElbowHandle"));
 	LeftHandle = CreateDefaultSubobject<UPhysicsHandleComponent>(TEXT("LeftHandle"));
-	LeftElbowHandle = CreateDefaultSubobject<UPhysicsHandleComponent>(TEXT("LeftElbowHandle"));
     PhysicalAnim = CreateDefaultSubobject<UPhysicalAnimationComponent>(TEXT("PhysicalAnim"));
 
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
@@ -116,15 +111,27 @@ void ACapStoneCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputC
 	}
 }
 
+void ACapStoneCharacter::RLMove(FVector2D MovementVector)
+{
+	// find out which way is forward
+	const FRotator Rotation = Controller->GetControlRotation();
+	const FRotator YawRotation(0, Rotation.Yaw, 0);
+
+	// get forward vector
+	const FVector ForwardDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
+
+	// get right vector 
+	const FVector RightDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
+	
+	// add movement 
+	AddMovementInput(ForwardDirection, MovementVector.Y);
+	AddMovementInput(RightDirection, MovementVector.X);
+}
+
 void ACapStoneCharacter::Move(const FInputActionValue& Value)
 {
 	// input is a Vector2D
 	FVector2D MovementVector = Value.Get<FVector2D>();
-	//UE_LOG(LogTemp, Warning, TEXT("MovementVector: X=%f, Y=%f"), MovementVector.X, MovementVector.Y);
-
-	if(MovementVector.X==1.f || MovementVector.X==-1.f){
-		return;
-	}
 
 	if (Controller != nullptr)
 	{
@@ -137,18 +144,20 @@ void ACapStoneCharacter::Move(const FInputActionValue& Value)
 	
 		// get right vector 
 		const FVector RightDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
-
-		// add movement 
-		if(MovementVector.Y>0)
-		{
-			AddMovementInput(ForwardDirection, MovementVector.Y);
-		}
-		else
-		{
-			AddMovementInput(ForwardDirection, MovementVector.Y);
-		}
 		
+		// add movement 
+		AddMovementInput(ForwardDirection, MovementVector.Y);
 		AddMovementInput(RightDirection, MovementVector.X);
+	}
+}
+
+void ACapStoneCharacter::RLLook(FVector2D LookAxisVector)
+{
+	if (Controller != nullptr)
+	{
+		// add yaw and pitch input to controller
+		AddControllerYawInput(LookAxisVector.X);
+		AddControllerPitchInput(LookAxisVector.Y);
 	}
 }
 
@@ -404,17 +413,18 @@ void ACapStoneCharacter::Tick(float DeltaTime)
 		0.0f                    // 선 두께
 	);
 
-	DrawDebugSphere(
-		GetWorld(),             // 월드 컨텍스트
-		GetMesh()->GetSocketLocation("neck_01"),     // 중심 위치
-		MaxRange,                  // 반지름
-		32,                    // 세그먼트 수 (자세함 정도)
-		FColor::Green,            // 색상
-		false,                  // 지속 여부 (true면 계속 표시)
-		0.0f,                   // 지속 시간 (false일 때만 유효)
-		0,                      // 깊이 우선순위
-		0.0f                    // 선 두께
-	);
+	// UPhysicsHandleComponent 이동 가능 범위
+	// DrawDebugSphere(
+	// 	GetWorld(),             // 월드 컨텍스트
+	// 	GetMesh()->GetSocketLocation("neck_01"),     // 중심 위치
+	// 	MaxRange,                  // 반지름
+	// 	32,                    // 세그먼트 수 (자세함 정도)
+	// 	FColor::Green,            // 색상
+	// 	false,                  // 지속 여부 (true면 계속 표시)
+	// 	0.0f,                   // 지속 시간 (false일 때만 유효)
+	// 	0,                      // 깊이 우선순위
+	// 	0.0f                    // 선 두께
+	// );
 
 	FTransform HandRightTransform = GetMesh()->GetSocketTransform(hand_r, ERelativeTransformSpace::RTS_World);
 	FVector BoneLocation = HandRightTransform.GetLocation();
@@ -431,6 +441,14 @@ void ACapStoneCharacter::Tick(float DeltaTime)
     DrawDebugLine(GetWorld(), BoneLocation, BoneLocation + Forward * LineLength, FColor::Red, false, -1.f, 0, 2.f);
     DrawDebugLine(GetWorld(), BoneLocation, BoneLocation + Right   * LineLength, FColor::Green, false, -1.f, 0, 2.f);
     DrawDebugLine(GetWorld(), BoneLocation, BoneLocation + Up      * LineLength, FColor::Blue, false, -1.f, 0, 2.f);
+
+	if(bIsHit)
+	{
+		if (GEngine)
+		{
+			GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::Red, TEXT("충돌 발생!"));
+		}
+	}
 
 }
 
@@ -456,7 +474,21 @@ void ACapStoneCharacter::OnMeshHit(UPrimitiveComponent* HitComp, AActor* OtherAc
 			UE_LOG(LogTemp, Warning, TEXT("Hit Component: %s"), *GetNameSafe(Hit.GetComponent()));
 			UE_LOG(LogTemp, Warning, TEXT("Hit Actor: %s"), *GetNameSafe(Hit.GetActor()));
 			*/
+
+			bIsHit = true;
+			GetWorld()->GetTimerManager().ClearTimer(HitResetTimerHandle);
+			GetWorld()->GetTimerManager().SetTimer(
+				HitResetTimerHandle, 
+				this, 
+				&ACapStoneCharacter::ResetHitState, 
+				HitDuration, 
+				false
+			);
 		}
     }
 }
 
+void ACapStoneCharacter::ResetHitState()
+{
+    bIsHit = false;
+}
