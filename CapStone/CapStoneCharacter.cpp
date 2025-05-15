@@ -277,6 +277,58 @@ void ACapStoneCharacter::HandlePlusMinus(const FInputActionValue& Value){
 	MoveAmount = -MoveAmount;
 }
 
+void ACapStoneCharacter::RLRightPointMove(FVector RightOffset){
+	// FVector Direction(
+    //     FMath::Sign(RightOffset.X),
+    //     FMath::Sign(RightOffset.Y),
+    //     FMath::Sign(RightOffset.Z)
+    // );
+
+    // FVector Origin = GetMesh()->GetSocketLocation("neck_01");
+    // FVector NewLocation = RightPoint->GetComponentLocation() + RightPoint->GetComponentTransform().TransformVector(Direction);
+    // float NewDistance = FVector::Dist(Origin, NewLocation);
+
+    // if (NewDistance <= MaxRange)
+    // {
+    //     RightPoint->AddLocalOffset(Direction);
+    // }
+	
+	FVector Origin = GetMesh()->GetSocketLocation("neck_01");
+
+	FVector NewLocation = RightPoint->GetComponentLocation() + RightPoint->GetComponentTransform().TransformVector(RightOffset);
+	float NewDistance = FVector::Dist(Origin, NewLocation);
+	if (NewDistance <= MaxRange)
+	{
+		RightPoint->AddLocalOffset(RightOffset);
+	}
+}
+
+void ACapStoneCharacter::RLLeftPointMove(FVector LeftOffset){
+	// FVector Direction(
+    //     FMath::Sign(LeftOffset.X),
+    //     FMath::Sign(LeftOffset.Y),
+    //     FMath::Sign(LeftOffset.Z)
+    // );
+
+    // FVector Origin = GetMesh()->GetSocketLocation("neck_01");
+    // FVector NewLocation = LeftPoint->GetComponentLocation() + LeftPoint->GetComponentTransform().TransformVector(Direction);
+    // float NewDistance = FVector::Dist(Origin, NewLocation);
+
+    // if (NewDistance <= MaxRange)
+    // {
+    //     LeftPoint->AddLocalOffset(Direction);
+    // }
+
+	FVector Origin = GetMesh()->GetSocketLocation("neck_01");
+
+	FVector NewLocation = LeftPoint->GetComponentLocation() + LeftPoint->GetComponentTransform().TransformVector(LeftOffset);
+	float NewDistance = FVector::Dist(Origin, NewLocation);
+	if (NewDistance <= MaxRange)
+	{
+		LeftPoint->AddLocalOffset(LeftOffset);
+	}
+}
+
 
 void ACapStoneCharacter::BeginPlay()
 {
@@ -446,7 +498,7 @@ void ACapStoneCharacter::Tick(float DeltaTime)
 	{
 		if (GEngine)
 		{
-			GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::Red, TEXT("충돌 발생!"));
+			//GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::Red, TEXT("충돌 발생!"));
 		}
 	}
 

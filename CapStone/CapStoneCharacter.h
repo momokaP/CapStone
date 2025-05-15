@@ -95,6 +95,12 @@ protected:
 	void RLMove(FVector2D MovementVector);
 	UFUNCTION(BlueprintCallable)	
 	void RLLook(FVector2D LookAxisVector);
+	
+	UFUNCTION(BlueprintCallable)
+	void RLRightPointMove(FVector RightOffset);
+	UFUNCTION(BlueprintCallable)
+	void RLLeftPointMove(FVector LeftOffset);
+
 
 	/** Called for movement input */
 	void Move(const FInputActionValue& Value);
