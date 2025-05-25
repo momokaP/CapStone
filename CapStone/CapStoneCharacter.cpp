@@ -13,6 +13,7 @@
 #include "Components/PoseableMeshComponent.h"
 #include "DrawDebugHelpers.h"
 #include "Weapon.h"
+#include "Engine/DamageEvents.h"
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 
@@ -423,7 +424,6 @@ void ACapStoneCharacter::BeginPlay()
 	float ArmLength = ArmLength1 + ArmLength2;
 
 	MaxRange = ArmLength * 4.f;
-
 }
 
 // Called every frame
@@ -512,10 +512,26 @@ void ACapStoneCharacter::OnMeshHit(UPrimitiveComponent* HitComp, AActor* OtherAc
 		FName HitBone = Hit.BoneName;
         if (HitBone != "hand_r" && HitBone != "hand_l")
         {
+			AActor* HitActor = Hit.GetActor();
+			if(HitActor != nullptr)
+			{
+				FVector ShotDirection;
+				AController* OwnerController = nullptr;
+
+				FPointDamageEvent DamageEvent(Damage, Hit, ShotDirection, nullptr);
+				APawn* OwnerPawn = Cast<APawn>(GetOwner());
+				if(OwnerPawn != nullptr)
+				{
+					OwnerController = OwnerPawn->GetController();
+				}
+				HitActor->TakeDamage(Damage, DamageEvent, OwnerController, this);
+			}
+
 			UE_LOG(LogTemp, Warning, TEXT("=== OnMeshHit Called ==="));
 			UE_LOG(LogTemp, Warning, TEXT("HitComp: %s"), *HitComp->GetName());
 			UE_LOG(LogTemp, Warning, TEXT("OtherActor: %s"), *OtherActor->GetName());
 			UE_LOG(LogTemp, Warning, TEXT("Hit BoneName: %s"), *Hit.BoneName.ToString());
+			UE_LOG(LogTemp, Warning, TEXT("Hit Actor: %s"), *GetNameSafe(Hit.GetActor()));
 			// UE_LOG(LogTemp, Warning, TEXT("Hit !!!!!"));
 			// UE_LOG(LogTemp, Warning, TEXT("BoneName: %s"), *GetMesh()->FindClosestBone(Hit.ImpactPoint).ToString());
 			
@@ -536,6 +552,7 @@ void ACapStoneCharacter::OnMeshHit(UPrimitiveComponent* HitComp, AActor* OtherAc
 				HitDuration, 
 				false
 			);
+
 		}
     }
 }
@@ -543,4 +560,21 @@ void ACapStoneCharacter::OnMeshHit(UPrimitiveComponent* HitComp, AActor* OtherAc
 void ACapStoneCharacter::ResetHitState()
 {
     bIsHit = false;
+}
+
+float ACapStoneCharacter::TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser)
+{
+	float DamageToApplied = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
+	DamageToApplied = FMath::Min(Health, DamageToApplied);
+	Health = Health - DamageToApplied;
+
+	UE_LOG(LogTemp, Warning, TEXT("Health : %f"), Health);
+
+	if(Health<=0)
+	{
+		IsDead = true;
+		UE_LOG(LogTemp, Warning, TEXT("Dead"));
+	}
+
+	return DamageToApplied;
 }

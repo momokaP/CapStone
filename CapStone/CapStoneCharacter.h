@@ -128,6 +128,8 @@ protected:
 
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
+	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser) override;
+
 public:
 	/** Returns CameraBoom subobject **/
 	FORCEINLINE class USpringArmComponent* GetCameraBoom() const { return CameraBoom; }
@@ -150,6 +152,16 @@ private:
 	float SprintSpeed = 500.f;  // 달리기 속도
 	float MoveAmount = 1.f;
 	float MaxRange = 1.f;
+	float Damage = 10.f;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
+	bool IsDead = false;
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
+	float Health = 100.f;
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
+	int Stamina = 0;
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
+	int MaxStamina = 20000;
 
 	// 얘네들 c++에서 생성하려면 에디터 완전히 닫고 컴파일, 빌드 해야 함
 	UPROPERTY(EditDefaultsOnly, Category = "Weapon")
