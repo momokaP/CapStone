@@ -88,6 +88,12 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
+	const TArray<FVector>& GetEnemyLocation() const;
+	const TArray<FVector>& GetEnemyDirection() const;
+
+	USceneComponent* GetRightPoint() const;
+	USceneComponent* GetLeftPoint() const;
+
 protected:
 	void ResetHitState();
 
@@ -100,7 +106,6 @@ protected:
 	void RLRightPointMove(FVector RightOffset);
 	UFUNCTION(BlueprintCallable)
 	void RLLeftPointMove(FVector LeftOffset);
-
 
 	/** Called for movement input */
 	void Move(const FInputActionValue& Value);
@@ -137,6 +142,11 @@ public:
 	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
 
 private:
+	TArray<FVector> EnemyLocation;
+	TArray<FVector> EnemyDirection;
+
+	void MakeEnemyInformation();
+
 	FName hand_rSocket = TEXT("hand_rSocket");
 	FName hand_r = TEXT("hand_r");
 	FName lowerarm_r = TEXT("lowerarm_r");
@@ -153,6 +163,9 @@ private:
 	float MoveAmount = 1.f;
 	float MaxRange = 1.f;
 	float Damage = 10.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"), Category = TeamNumber)
+	int TeamID = 0;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
 	bool IsDead = false;

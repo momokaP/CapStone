@@ -14,6 +14,7 @@
 #include "DrawDebugHelpers.h"
 #include "Weapon.h"
 #include "Engine/DamageEvents.h"
+#include "Kismet/GameplayStatics.h"
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 
@@ -305,21 +306,6 @@ void ACapStoneCharacter::RLRightPointMove(FVector RightOffset){
 }
 
 void ACapStoneCharacter::RLLeftPointMove(FVector LeftOffset){
-	// FVector Direction(
-    //     FMath::Sign(LeftOffset.X),
-    //     FMath::Sign(LeftOffset.Y),
-    //     FMath::Sign(LeftOffset.Z)
-    // );
-
-    // FVector Origin = GetMesh()->GetSocketLocation("neck_01");
-    // FVector NewLocation = LeftPoint->GetComponentLocation() + LeftPoint->GetComponentTransform().TransformVector(Direction);
-    // float NewDistance = FVector::Dist(Origin, NewLocation);
-
-    // if (NewDistance <= MaxRange)
-    // {
-    //     LeftPoint->AddLocalOffset(Direction);
-    // }
-
 	FVector Origin = GetMesh()->GetSocketLocation("neck_01");
 
 	FVector NewLocation = LeftPoint->GetComponentLocation() + LeftPoint->GetComponentTransform().TransformVector(LeftOffset);
@@ -330,6 +316,28 @@ void ACapStoneCharacter::RLLeftPointMove(FVector LeftOffset){
 	}
 }
 
+void ACapStoneCharacter::MakeEnemyInformation()
+{
+	EnemyLocation.Empty();
+	EnemyDirection.Empty();
+
+	TArray<AActor*> Enemy;
+	UGameplayStatics::GetAllActorsOfClass(
+		GetWorld(), ACapStoneCharacter::StaticClass(), Enemy);
+
+	for (AActor* Actor : Enemy)
+    {
+        ACapStoneCharacter* OtherChar = Cast<ACapStoneCharacter>(Actor);
+        if (OtherChar && OtherChar != this)
+        {
+            if (OtherChar->TeamID != this->TeamID)
+            {
+				EnemyLocation.Add(OtherChar->GetActorLocation());
+				EnemyDirection.Add(OtherChar->GetActorForwardVector());
+			}
+        }
+    }
+}
 
 void ACapStoneCharacter::BeginPlay()
 {
@@ -424,6 +432,8 @@ void ACapStoneCharacter::BeginPlay()
 	float ArmLength = ArmLength1 + ArmLength2;
 
 	MaxRange = ArmLength * 4.f;
+
+	MakeEnemyInformation();
 }
 
 // Called every frame
@@ -577,4 +587,21 @@ float ACapStoneCharacter::TakeDamage(float DamageAmount, struct FDamageEvent con
 	}
 
 	return DamageToApplied;
+}
+
+const TArray<FVector>& ACapStoneCharacter::GetEnemyLocation() const
+{
+    return EnemyLocation;
+}
+const TArray<FVector>& ACapStoneCharacter::GetEnemyDirection() const
+{
+    return EnemyDirection;
+}
+USceneComponent* ACapStoneCharacter::GetRightPoint() const
+{
+    return RightPoint;
+}
+USceneComponent* ACapStoneCharacter::GetLeftPoint() const
+{
+    return LeftPoint;
 }

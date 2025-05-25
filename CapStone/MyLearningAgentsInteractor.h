@@ -25,4 +25,6 @@ public:
 private:
 	int LocationAmount = 5;
 	int RotationAmount = 5;
+
+	int MaxEnemyArrayNum = 4;
 };
