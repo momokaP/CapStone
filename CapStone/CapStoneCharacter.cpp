@@ -605,3 +605,11 @@ USceneComponent* ACapStoneCharacter::GetLeftPoint() const
 {
     return LeftPoint;
 }
+int32 ACapStoneCharacter::GetStamina() const
+{
+    return Stamina;
+}
+void ACapStoneCharacter::SetStamina(int32 NewStamina)
+{
+    Stamina = NewStamina;
+}

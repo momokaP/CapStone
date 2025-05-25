@@ -94,8 +94,8 @@ public:
 	USceneComponent* GetRightPoint() const;
 	USceneComponent* GetLeftPoint() const;
 
-protected:
-	void ResetHitState();
+	int32 GetStamina() const;
+	void SetStamina(int32 NewStamina);
 
 	UFUNCTION(BlueprintCallable)	
 	void RLMove(FVector2D MovementVector);
@@ -106,6 +106,9 @@ protected:
 	void RLRightPointMove(FVector RightOffset);
 	UFUNCTION(BlueprintCallable)
 	void RLLeftPointMove(FVector LeftOffset);
+
+protected:
+	void ResetHitState();
 
 	/** Called for movement input */
 	void Move(const FInputActionValue& Value);
@@ -165,16 +168,16 @@ private:
 	float Damage = 10.f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"), Category = TeamNumber)
-	int TeamID = 0;
+	int32 TeamID = 0;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
 	bool IsDead = false;
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
 	float Health = 100.f;
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
-	int Stamina = 0;
+	int32 Stamina = 0;
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
-	int MaxStamina = 20000;
+	int32 MaxStamina = 20000;
 
 	// 얘네들 c++에서 생성하려면 에디터 완전히 닫고 컴파일, 빌드 해야 함
 	UPROPERTY(EditDefaultsOnly, Category = "Weapon")
