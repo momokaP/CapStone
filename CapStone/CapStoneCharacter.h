@@ -88,15 +88,6 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
-	const TArray<FVector>& GetEnemyLocation() const;
-	const TArray<FVector>& GetEnemyDirection() const;
-
-	USceneComponent* GetRightPoint() const;
-	USceneComponent* GetLeftPoint() const;
-
-	int32 GetStamina() const;
-	void SetStamina(int32 NewStamina);
-
 	UFUNCTION(BlueprintCallable)	
 	void RLMove(FVector2D MovementVector);
 	UFUNCTION(BlueprintCallable)	
@@ -106,6 +97,29 @@ public:
 	void RLRightPointMove(FVector RightOffset);
 	UFUNCTION(BlueprintCallable)
 	void RLLeftPointMove(FVector LeftOffset);
+
+	void RLResetCharacter();
+
+	// Getter, Setter
+	const TArray<FVector>& GetEnemyLocation() const;
+	const TArray<FVector>& GetEnemyDirection() const;
+	const TArray<ACapStoneCharacter*>& GetEnemyCharacters() const;
+
+	USceneComponent* GetRightPoint() const;
+	USceneComponent* GetLeftPoint() const;
+
+	int32 GetMaxStamina() const;
+	int32 GetStamina() const;
+	void SetStamina(int32 NewStamina);
+
+	bool GetIsDead() const;
+	void SetIsDead(bool bDead);
+
+	bool IsHit() const;
+	void SetIsHit(bool bHit);
+
+	float GetHealth() const { return Health; }
+	void SetHealth(float NewHealth) { Health = FMath::Clamp(NewHealth, 0.f, 100.f); }
 
 protected:
 	void ResetHitState();
@@ -145,6 +159,7 @@ public:
 	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
 
 private:
+	TArray<ACapStoneCharacter*> EnemyCharacters;
 	TArray<FVector> EnemyLocation;
 	TArray<FVector> EnemyDirection;
 
@@ -166,6 +181,7 @@ private:
 	float MoveAmount = 1.f;
 	float MaxRange = 1.f;
 	float Damage = 10.f;
+	float ResetDistance = 500.f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"), Category = TeamNumber)
 	int32 TeamID = 0;

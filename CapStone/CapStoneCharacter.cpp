@@ -15,6 +15,7 @@
 #include "Weapon.h"
 #include "Engine/DamageEvents.h"
 #include "Kismet/GameplayStatics.h"
+#include "Math/UnrealMathUtility.h"
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 
@@ -318,6 +319,7 @@ void ACapStoneCharacter::RLLeftPointMove(FVector LeftOffset){
 
 void ACapStoneCharacter::MakeEnemyInformation()
 {
+	EnemyCharacters.Empty();
 	EnemyLocation.Empty();
 	EnemyDirection.Empty();
 
@@ -332,6 +334,7 @@ void ACapStoneCharacter::MakeEnemyInformation()
         {
             if (OtherChar->TeamID != this->TeamID)
             {
+				EnemyCharacters.Add(OtherChar);
 				EnemyLocation.Add(OtherChar->GetActorLocation());
 				EnemyDirection.Add(OtherChar->GetActorForwardVector());
 			}
@@ -434,6 +437,7 @@ void ACapStoneCharacter::BeginPlay()
 	MaxRange = ArmLength * 4.f;
 
 	MakeEnemyInformation();
+	RLResetCharacter();
 }
 
 // Called every frame
@@ -589,6 +593,29 @@ float ACapStoneCharacter::TakeDamage(float DamageAmount, struct FDamageEvent con
 	return DamageToApplied;
 }
 
+void ACapStoneCharacter::RLResetCharacter()
+{
+	float RandomRadian = FMath::FRandRange(0.f, 6.28f);
+	float RandomDistance = FMath::FRandRange(0.1f, 1.f) * ResetDistance;
+
+	float ResetLocationX = 
+	EnemyLocation[0].X + FMath::Cos(RandomRadian) * RandomDistance;
+	float ResetLocationY = 
+	EnemyLocation[0].Y + FMath::Sin(RandomRadian) * RandomDistance;
+	FVector ResetLocation = 
+	FVector(ResetLocationX, ResetLocationY, EnemyLocation[0].Z);
+
+	SetActorLocation(ResetLocation);
+
+	EnemyCharacters[0]->SetIsDead(false);
+	EnemyCharacters[0]->SetHealth(100.0);
+	Stamina = 0;
+}
+
+const TArray<ACapStoneCharacter*>& ACapStoneCharacter::GetEnemyCharacters() const
+{
+    return EnemyCharacters;
+}
 const TArray<FVector>& ACapStoneCharacter::GetEnemyLocation() const
 {
     return EnemyLocation;
@@ -605,6 +632,10 @@ USceneComponent* ACapStoneCharacter::GetLeftPoint() const
 {
     return LeftPoint;
 }
+int32 ACapStoneCharacter::GetMaxStamina() const
+{
+    return MaxStamina;
+}
 int32 ACapStoneCharacter::GetStamina() const
 {
     return Stamina;
@@ -612,4 +643,20 @@ int32 ACapStoneCharacter::GetStamina() const
 void ACapStoneCharacter::SetStamina(int32 NewStamina)
 {
     Stamina = NewStamina;
+}
+bool ACapStoneCharacter::IsHit() const
+{
+    return bIsHit;
+}
+void ACapStoneCharacter::SetIsHit(bool bHit)
+{
+    bIsHit = bHit;
+}
+bool ACapStoneCharacter::GetIsDead() const
+{
+    return IsDead;
+}
+void ACapStoneCharacter::SetIsDead(bool bDead)
+{
+    IsDead = bDead;
 }

@@ -1,7 +1,12 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-
+#include "CapStoneCharacter.h"
+#include "Kismet/GameplayStatics.h"
 #include "MyLearningManager.h"
+#include "LearningAgentsInteractor.h"
+#include "MyLearningAgentsInteractor.h"
+#include "LearningAgentsPolicy.h"
+
 
 // Sets default values
 AMyLearningManager::AMyLearningManager()
@@ -17,7 +22,37 @@ AMyLearningManager::AMyLearningManager()
 void AMyLearningManager::BeginPlay()
 {
 	Super::BeginPlay();
+
+	// Set ActorCharacters
+	ActorCharacters.Empty();
+
+	TArray<AActor*> Actors;
+	UGameplayStatics::GetAllActorsOfClass(
+		GetWorld(), ACapStoneCharacter::StaticClass(), Actors);
+
+	for (AActor* Actor : Actors)
+    {
+        ACapStoneCharacter* Character = Cast<ACapStoneCharacter>(Actor);
+        if (Character)
+        {
+			Character->AddTickPrerequisiteActor(this);
+			ActorCharacters.Add(Character);
+        }
+    }
+
+	// Make Interactor
+	Interactor = ULearningAgentsInteractor::MakeInteractor(
+		LearningAgentsManager, UMyLearningAgentsInteractor::StaticClass());
 	
+	// Make Policy
+	Policy = ULearningAgentsPolicy::MakePolicy(
+		LearningAgentsManager, Interactor, ULearningAgentsPolicy::StaticClass());
+	if(RunInference)
+	{
+		
+	}
+	
+
 }
 
 // Called every frame

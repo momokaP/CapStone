@@ -8,6 +8,12 @@
 #include "GameFramework/Actor.h"
 #include "MyLearningManager.generated.h"
 
+class ACapStoneCharacter;
+class ULearningAgentsInteractor;
+class ULearningAgentsPolicy;
+class ULearningAgentsCritic;
+class ULearningAgentsTrainingEnvironment;
+
 UCLASS()
 class CAPSTONE_API AMyLearningManager : public AActor
 {
@@ -28,4 +34,18 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
+private:
+	TArray<ACapStoneCharacter*> ActorCharacters;
+	ULearningAgentsInteractor* Interactor;
+
+	ULearningAgentsPolicy* Policy;
+	bool RunInference = false;
+	FFilePath EncoderSnapshot;
+	FFilePath PolicySnapshot;
+	FFilePath DecoderSnapshot;
+	FLearningAgentsPolicySettings PolicySettings;
+
+	ULearningAgentsCritic* Critic;
+	ULearningAgentsTrainingEnvironment* TrainingEnv;
+	
 };
