@@ -595,6 +595,11 @@ float ACapStoneCharacter::TakeDamage(float DamageAmount, struct FDamageEvent con
 
 void ACapStoneCharacter::RLResetCharacter()
 {
+	if(EnemyCharacters.Num() <= 0)
+	{
+		return;
+	}
+
 	float RandomRadian = FMath::FRandRange(0.f, 6.28f);
 	float RandomDistance = FMath::FRandRange(0.1f, 1.f) * ResetDistance;
 

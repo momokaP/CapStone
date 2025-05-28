@@ -1,10 +1,12 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
+#include "MyLearningAgentsEnv.h"
+
 #include "CapStoneCharacter.h"
 #include "LearningAgentsRewards.h"
 #include "LearningAgentsCompletions.h"
 #include "LearningAgentsManagerListener.h"
-#include "MyLearningAgentsEnv.h"
+
 
 void UMyLearningAgentsEnv::GatherAgentReward_Implementation(
     float& OutReward, const int32 AgentId
@@ -19,6 +21,10 @@ void UMyLearningAgentsEnv::GatherAgentReward_Implementation(
         
         FVector MyLocation = RewardCharacter->GetActorLocation();
         const TArray<FVector>& EnemyLocations = RewardCharacter->GetEnemyLocation();
+        if(EnemyLocations.Num() <= 0)
+        {
+            return;
+        }
         float DistanceReward = ULearningAgentsRewards::MakeRewardFromLocationSimilarity(
             MyLocation, EnemyLocations[0], 100.0f, 1.0f);
     
@@ -35,6 +41,10 @@ void UMyLearningAgentsEnv::GatherAgentCompletion_Implementation(
     if (CompletionCharacter)
     {
         const TArray<ACapStoneCharacter*>& Enemies = CompletionCharacter->GetEnemyCharacters();
+        if(Enemies.Num() <= 0)
+        {
+            return;
+        }
         ELearningAgentsCompletion DeadCompletion = 
         ULearningAgentsCompletions::MakeCompletionOnCondition(Enemies[0]->GetIsDead());
 
@@ -45,6 +55,10 @@ void UMyLearningAgentsEnv::GatherAgentCompletion_Implementation(
 
         FVector MyLocation = CompletionCharacter->GetActorLocation();
         const TArray<FVector>& EnemyLocations = CompletionCharacter->GetEnemyLocation();
+        if(EnemyLocations.Num() <= 0)
+        {
+            return;
+        }
         ELearningAgentsCompletion DistanceCompletion = 
         ULearningAgentsCompletions::MakeCompletionOnLocationDifferenceAboveThreshold(
             MyLocation, EnemyLocations[0], 600.f);

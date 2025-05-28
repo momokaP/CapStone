@@ -3,6 +3,11 @@
 #pragma once
 
 #include "LearningAgentsManager.h"
+#include "LearningAgentsPolicy.h"
+#include "LearningAgentsCritic.h"
+#include "LearningAgentsCommunicator.h"
+#include "LearningAgentsTrainer.h"
+#include "LearningAgentsPPOTrainer.h"
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
@@ -10,9 +15,10 @@
 
 class ACapStoneCharacter;
 class ULearningAgentsInteractor;
-class ULearningAgentsPolicy;
-class ULearningAgentsCritic;
+// class ULearningAgentsPolicy;
+// class ULearningAgentsCritic;
 class ULearningAgentsTrainingEnvironment;
+class ULearningAgentsNeuralNetwork;
 
 UCLASS()
 class CAPSTONE_API AMyLearningManager : public AActor
@@ -36,16 +42,51 @@ public:
 
 private:
 	TArray<ACapStoneCharacter*> ActorCharacters;
+	
+	bool RunInference = false;
+	bool Reinitialize = true;
+
+	// Interactor
 	ULearningAgentsInteractor* Interactor;
 
+	// Policy
 	ULearningAgentsPolicy* Policy;
-	bool RunInference = false;
+	
 	FFilePath EncoderSnapshot;
 	FFilePath PolicySnapshot;
 	FFilePath DecoderSnapshot;
+	
+	FString EncoderNNPath = "";
+	ULearningAgentsNeuralNetwork* EncoderNN = 
+	LoadObject<ULearningAgentsNeuralNetwork>(nullptr, *EncoderNNPath);
+	FString PolicyNNPath = "";
+	ULearningAgentsNeuralNetwork* PolicyNN = 
+	LoadObject<ULearningAgentsNeuralNetwork>(nullptr, *PolicyNNPath);
+	FString DecoderNNPath = "";
+	ULearningAgentsNeuralNetwork* DecoderNN = 
+	LoadObject<ULearningAgentsNeuralNetwork>(nullptr, *DecoderNNPath);
+
 	FLearningAgentsPolicySettings PolicySettings;
 
+	// Critic
 	ULearningAgentsCritic* Critic;
-	ULearningAgentsTrainingEnvironment* TrainingEnv;
+	FString CriticNNPath = "";
+	ULearningAgentsNeuralNetwork* CriticNN = 
+	LoadObject<ULearningAgentsNeuralNetwork>(nullptr, *CriticNNPath);
+	FLearningAgentsCriticSettings CriticSettings;
 	
+	// TrainingEnvironment
+	ULearningAgentsTrainingEnvironment* TrainingEnv;
+
+	// Communicator
+	FLearningAgentsCommunicator Communicator;
+	FLearningAgentsTrainerProcessSettings TrainerProcessSettings;
+	FLearningAgentsSharedMemoryCommunicatorSettings SharedMemorySettings;
+	
+	// PPO Trainer
+	ULearningAgentsPPOTrainer* PPOTrainer;
+	FLearningAgentsPPOTrainerSettings PPOTrainerSettings;
+	FLearningAgentsPPOTrainingSettings PPOTrainingSettings;
+	FLearningAgentsTrainingGameSettings TrainingGameSettings;
+
 };
