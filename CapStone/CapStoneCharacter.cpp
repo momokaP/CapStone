@@ -64,7 +64,7 @@ ACapStoneCharacter::ACapStoneCharacter()
 
 	RightHandle = CreateDefaultSubobject<UPhysicsHandleComponent>(TEXT("RightHandle"));
 	LeftHandle = CreateDefaultSubobject<UPhysicsHandleComponent>(TEXT("LeftHandle"));
-    PhysicalAnim = CreateDefaultSubobject<UPhysicalAnimationComponent>(TEXT("PhysicalAnim"));
+	PhysicalAnim = CreateDefaultSubobject<UPhysicalAnimationComponent>(TEXT("PhysicalAnim"));
 
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
 	// are set in the derived blueprint asset named ThirdPersonCharacter (to avoid direct content references in C++)
@@ -391,6 +391,51 @@ void ACapStoneCharacter::BeginPlay()
 		UE_LOG(LogTemp, Error, TEXT("HandLeft is invalid or not an Actor class"));
 	}
 
+	InitSimulatePhysics();
+	InitPointHandle();
+
+    CalculateMaxRange();
+
+    MakeEnemyInformation();
+	RLResetCharacter();
+}
+
+void ACapStoneCharacter::CalculateMaxRange()
+{
+    const FVector HandLoc = GetMesh()->GetSocketLocation("hand_r");
+    const FVector LowerarmLoc = GetMesh()->GetSocketLocation("lowerarm_r");
+    const FVector UpperarmLoc = GetMesh()->GetSocketLocation("upperarm_r");
+
+    float ArmLength1 = FVector::Dist(LowerarmLoc, HandLoc);
+    float ArmLength2 = FVector::Dist(LowerarmLoc, UpperarmLoc);
+    float ArmLength = ArmLength1 + ArmLength2;
+
+    MaxRange = ArmLength * 4.f;
+}
+
+void ACapStoneCharacter::InitSimulatePhysics()
+{
+	FName Pelvis = TEXT("pelvis");
+	FName ProfileTest = TEXT("Test");
+	PhysicalAnim->SetSkeletalMeshComponent(GetMesh());
+	PhysicalAnim->ApplyPhysicalAnimationProfileBelow(Pelvis, ProfileTest, true, false);
+	GetMesh()->SetAllBodiesBelowSimulatePhysics(Pelvis, true, false); 
+
+	FName foot_r = TEXT("foot_r");
+	FName foot_l = TEXT("foot_l");
+	FName spine_03 = TEXT("spine_03");
+	FName neck_02 = TEXT("neck_02");
+	GetMesh()->SetBodySimulatePhysics(foot_r, false);
+	GetMesh()->SetBodySimulatePhysics(foot_l, false);
+	GetMesh()->SetBodySimulatePhysics(spine_03, false);
+	GetMesh()->SetBodySimulatePhysics(neck_02, false);
+}
+
+void ACapStoneCharacter::InitPointHandle()
+{
+	RightHandle->ReleaseComponent();
+	LeftHandle->ReleaseComponent();
+
 	RightPoint->SetWorldLocation(GetMesh()->GetSocketLocation(hand_rSocket));
 	RightPoint->SetWorldRotation(FRotator::ZeroRotator);
 
@@ -410,34 +455,6 @@ void ACapStoneCharacter::BeginPlay()
 		LeftPoint->GetComponentLocation(),
 		LeftPoint->GetComponentRotation()
 	);
-
-	FName Pelvis = TEXT("pelvis");
-	FName ProfileTest = TEXT("Test");
-	PhysicalAnim->SetSkeletalMeshComponent(GetMesh());
-	PhysicalAnim->ApplyPhysicalAnimationProfileBelow(Pelvis, ProfileTest, true, false);
-	GetMesh()->SetAllBodiesBelowSimulatePhysics(Pelvis, true, false); 
-
-	FName foot_r = TEXT("foot_r");
-	FName foot_l = TEXT("foot_l");
-	FName spine_03 = TEXT("spine_03");
-	FName neck_02 = TEXT("neck_02");
-	GetMesh()->SetBodySimulatePhysics(foot_r, false);
-	GetMesh()->SetBodySimulatePhysics(foot_l, false);
-	GetMesh()->SetBodySimulatePhysics(spine_03, false);
-	GetMesh()->SetBodySimulatePhysics(neck_02, false);
-
-	const FVector HandLoc = GetMesh()->GetSocketLocation("hand_r"); 
-	const FVector LowerarmLoc = GetMesh()->GetSocketLocation("lowerarm_r");
-	const FVector UpperarmLoc = GetMesh()->GetSocketLocation("upperarm_r");
-
-	float ArmLength1 = FVector::Dist(LowerarmLoc, HandLoc);
-	float ArmLength2 = FVector::Dist(LowerarmLoc, UpperarmLoc);
-	float ArmLength = ArmLength1 + ArmLength2;
-
-	MaxRange = ArmLength * 4.f;
-
-	MakeEnemyInformation();
-	RLResetCharacter();
 }
 
 // Called every frame
@@ -455,6 +472,12 @@ void ACapStoneCharacter::Tick(float DeltaTime)
 		LeftPoint->GetComponentRotation()
 	);
 
+	ShowDebugSphere();
+    ShowRightHandAngle();
+}
+
+void ACapStoneCharacter::ShowDebugSphere()
+{
 	DrawDebugSphere(
 		GetWorld(),             // 월드 컨텍스트
 		LeftPoint->GetComponentLocation(),     // 중심 위치
@@ -479,43 +502,37 @@ void ACapStoneCharacter::Tick(float DeltaTime)
 		0.0f                    // 선 두께
 	);
 
-	// UPhysicsHandleComponent 이동 가능 범위
-	// DrawDebugSphere(
-	// 	GetWorld(),             // 월드 컨텍스트
-	// 	GetMesh()->GetSocketLocation("neck_01"),     // 중심 위치
-	// 	MaxRange,                  // 반지름
-	// 	32,                    // 세그먼트 수 (자세함 정도)
-	// 	FColor::Green,            // 색상
-	// 	false,                  // 지속 여부 (true면 계속 표시)
-	// 	0.0f,                   // 지속 시간 (false일 때만 유효)
-	// 	0,                      // 깊이 우선순위
-	// 	0.0f                    // 선 두께
-	// );
+    // // UPhysicsHandleComponent 이동 가능 범위
+    // DrawDebugSphere(
+    //     GetWorld(),                              // 월드 컨텍스트
+    //     GetMesh()->GetSocketLocation("neck_01"), // 중심 위치
+    //     MaxRange,                                // 반지름
+    //     32,                                      // 세그먼트 수 (자세함 정도)
+    //     FColor::Green,                           // 색상
+    //     false,                                   // 지속 여부 (true면 계속 표시)
+    //     0.0f,                                    // 지속 시간 (false일 때만 유효)
+    //     0,                                       // 깊이 우선순위
+    //     0.0f                                     // 선 두께
+    // );
+}
 
-	FTransform HandRightTransform = GetMesh()->GetSocketTransform(hand_r, ERelativeTransformSpace::RTS_World);
-	FVector BoneLocation = HandRightTransform.GetLocation();
+void ACapStoneCharacter::ShowRightHandAngle()
+{
+    FTransform HandRightTransform = GetMesh()->GetSocketTransform(hand_r, ERelativeTransformSpace::RTS_World);
+    FVector BoneLocation = HandRightTransform.GetLocation();
     FRotator BoneRotation = HandRightTransform.GetRotation().Rotator();
 
     FRotationMatrix RotMatrix(BoneRotation);
 
     FVector Forward = RotMatrix.GetUnitAxis(EAxis::X); // 빨강: +X (Forward)
-    FVector Right   = RotMatrix.GetUnitAxis(EAxis::Y); // 초록: +Y (Right)
-    FVector Up      = RotMatrix.GetUnitAxis(EAxis::Z); // 파랑: +Z (Up)
+    FVector Right = RotMatrix.GetUnitAxis(EAxis::Y);   // 초록: +Y (Right)
+    FVector Up = RotMatrix.GetUnitAxis(EAxis::Z);      // 파랑: +Z (Up)
 
     float LineLength = 20.f;
 
     DrawDebugLine(GetWorld(), BoneLocation, BoneLocation + Forward * LineLength, FColor::Red, false, -1.f, 0, 2.f);
-    DrawDebugLine(GetWorld(), BoneLocation, BoneLocation + Right   * LineLength, FColor::Green, false, -1.f, 0, 2.f);
-    DrawDebugLine(GetWorld(), BoneLocation, BoneLocation + Up      * LineLength, FColor::Blue, false, -1.f, 0, 2.f);
-
-	if(bIsHit)
-	{
-		if (GEngine)
-		{
-			//GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::Red, TEXT("충돌 발생!"));
-		}
-	}
-
+    DrawDebugLine(GetWorld(), BoneLocation, BoneLocation + Right * LineLength, FColor::Green, false, -1.f, 0, 2.f);
+    DrawDebugLine(GetWorld(), BoneLocation, BoneLocation + Up * LineLength, FColor::Blue, false, -1.f, 0, 2.f);
 }
 
 void ACapStoneCharacter::OnMeshHit(UPrimitiveComponent* HitComp, AActor* OtherActor,
@@ -600,6 +617,8 @@ void ACapStoneCharacter::RLResetCharacter()
 		return;
 	}
 
+	GetMesh()->SetSimulatePhysics(false);
+
 	float RandomRadian = FMath::FRandRange(0.f, 6.28f);
 	float RandomDistance = FMath::FRandRange(0.1f, 1.f) * ResetDistance;
 
@@ -610,13 +629,18 @@ void ACapStoneCharacter::RLResetCharacter()
 	FVector ResetLocation = 
 	FVector(ResetLocationX, ResetLocationY, EnemyLocation[0].Z);
 
-	SetActorLocation(ResetLocation);
+	SetActorLocation(ResetLocation, false, nullptr, ETeleportType::TeleportPhysics);
 
 	EnemyCharacters[0]->SetIsDead(false);
 	EnemyCharacters[0]->SetHealth(100.0);
 	Stamina = 0;
+
+	InitSimulatePhysics();
+	InitPointHandle();
 }
 
+//////////////////////////////////////////////////////////////////////////
+// getter, setter
 const TArray<ACapStoneCharacter*>& ACapStoneCharacter::GetEnemyCharacters() const
 {
     return EnemyCharacters;

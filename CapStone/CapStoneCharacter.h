@@ -86,9 +86,13 @@ public:
 	ACapStoneCharacter();
 
 	// Called every frame
-	virtual void Tick(float DeltaTime) override;
+    virtual void Tick(float DeltaTime) override;
 
-	UFUNCTION(BlueprintCallable)	
+    void ShowDebugSphere();
+
+    void ShowRightHandAngle();
+
+    UFUNCTION(BlueprintCallable)	
 	void RLMove(FVector2D MovementVector);
 	UFUNCTION(BlueprintCallable)	
 	void RLLook(FVector2D LookAxisVector);
@@ -144,9 +148,15 @@ protected:
 	);
 
 protected:
-	virtual void BeginPlay() override;
+    virtual void BeginPlay() override;
 
-	virtual void NotifyControllerChanged() override;
+    void CalculateMaxRange();
+
+    void NewFunction();
+
+    void InitSimulatePhysics();
+
+    virtual void NotifyControllerChanged() override;
 
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
@@ -164,6 +174,7 @@ private:
 	TArray<FVector> EnemyDirection;
 
 	void MakeEnemyInformation();
+	void InitPointHandle();
 
 	FName hand_rSocket = TEXT("hand_rSocket");
 	FName hand_r = TEXT("hand_r");
