@@ -52,27 +52,40 @@ private:
 	// Policy
 	ULearningAgentsPolicy* Policy;
 	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"), Category = "Snapshot")
 	FFilePath EncoderSnapshot;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"), Category = "Snapshot")
 	FFilePath PolicySnapshot;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"), Category = "Snapshot")
 	FFilePath DecoderSnapshot;
 	
-	FString EncoderNNPath = "";
-	ULearningAgentsNeuralNetwork* EncoderNN = 
-	LoadObject<ULearningAgentsNeuralNetwork>(nullptr, *EncoderNNPath);
-	FString PolicyNNPath = "";
-	ULearningAgentsNeuralNetwork* PolicyNN = 
-	LoadObject<ULearningAgentsNeuralNetwork>(nullptr, *PolicyNNPath);
-	FString DecoderNNPath = "";
-	ULearningAgentsNeuralNetwork* DecoderNN = 
-	LoadObject<ULearningAgentsNeuralNetwork>(nullptr, *DecoderNNPath);
+	// UPROPERTY(EditAnywhere, Category = "NeuralNetwork")
+	// FString EncoderNNPath = "";
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"), Category = "NeuralNetwork")
+	ULearningAgentsNeuralNetwork* EncoderNN; 
+	// = LoadObject<ULearningAgentsNeuralNetwork>(nullptr, *EncoderNNPath);
+
+	// UPROPERTY(EditAnywhere, Category = "NeuralNetwork")
+	// FString PolicyNNPath = "";
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"), Category = "NeuralNetwork")
+	ULearningAgentsNeuralNetwork* PolicyNN;
+	// = LoadObject<ULearningAgentsNeuralNetwork>(nullptr, *PolicyNNPath);
+
+	// UPROPERTY(EditAnywhere, Category = "NeuralNetwork")
+	// FString DecoderNNPath = "";
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"), Category = "NeuralNetwork")
+	ULearningAgentsNeuralNetwork* DecoderNN;
+	// = LoadObject<ULearningAgentsNeuralNetwork>(nullptr, *DecoderNNPath);
 
 	FLearningAgentsPolicySettings PolicySettings;
 
 	// Critic
 	ULearningAgentsCritic* Critic;
-	FString CriticNNPath = "";
-	ULearningAgentsNeuralNetwork* CriticNN = 
-	LoadObject<ULearningAgentsNeuralNetwork>(nullptr, *CriticNNPath);
+	// UPROPERTY(EditAnywhere, Category = "NeuralNetwork")
+	// FString CriticNNPath = "";
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"), Category = "NeuralNetwork")
+	ULearningAgentsNeuralNetwork* CriticNN; 
+	// = LoadObject<ULearningAgentsNeuralNetwork>(nullptr, *CriticNNPath);
 	FLearningAgentsCriticSettings CriticSettings;
 	
 	// TrainingEnvironment

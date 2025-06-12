@@ -7,6 +7,7 @@
 #include "LearningAgentsInteractor.h"
 #include "LearningAgentsPolicy.h"
 #include "LearningAgentsNeuralNetwork.h"
+#include "LearningNeuralNetwork.h"
 #include "LearningAgentsCritic.h"
 #include "LearningAgentsTrainingEnvironment.h"
 #include "LearningAgentsCommunicator.h"
@@ -32,6 +33,20 @@ void AMyLearningManager::BeginPlay()
 {
 	Super::BeginPlay();
 
+	if (PolicyNN){
+		UE_LOG(LogTemp, Log, TEXT("PolicyNN is valid: %s"), *PolicyNN->GetName());
+	} else{UE_LOG(LogTemp, Warning, TEXT("PolicyNN is null"));}
+	if (CriticNN){
+		UE_LOG(LogTemp, Log, TEXT("CriticNN is valid: %s"), *CriticNN->GetName());
+	} else{UE_LOG(LogTemp, Warning, TEXT("CriticNN is null"));}
+	if (EncoderNN){
+		UE_LOG(LogTemp, Log, TEXT("EncoderNN is valid: %s"), *EncoderNN->GetName());
+	} else {UE_LOG(LogTemp, Warning, TEXT("EncoderNN is null"));}
+	if (DecoderNN){
+		UE_LOG(LogTemp, Log, TEXT("DecoderNN is valid: %s"), *DecoderNN->GetName());
+	} else{UE_LOG(LogTemp, Warning, TEXT("DecoderNN is null"));}
+		
+
 	// Set ActorCharacters
 	ActorCharacters.Empty();
 
@@ -52,7 +67,12 @@ void AMyLearningManager::BeginPlay()
 	// Make Interactor
 	Interactor = ULearningAgentsInteractor::MakeInteractor(
 		LearningAgentsManager, UMyLearningAgentsInteractor::StaticClass());
-	
+	if (!Interactor)
+	{
+		UE_LOG(LogTemp, Error, TEXT("Interactor is nullptr."));
+		return;
+	}
+
 	// Make Policy
 	Policy = ULearningAgentsPolicy::MakePolicy(
 		LearningAgentsManager, 
@@ -70,9 +90,24 @@ void AMyLearningManager::BeginPlay()
 	if(RunInference)
 	{
 		Policy->GetEncoderNetworkAsset()->LoadNetworkFromSnapshot(EncoderSnapshot);
-		Policy->GetPolicyNetworkAsset()->LoadNetworkFromSnapshot(EncoderSnapshot);
-		Policy->GetDecoderNetworkAsset()->LoadNetworkFromSnapshot(EncoderSnapshot);
+		Policy->GetPolicyNetworkAsset()->LoadNetworkFromSnapshot(PolicySnapshot);
+		Policy->GetDecoderNetworkAsset()->LoadNetworkFromSnapshot(DecoderSnapshot);
 	}
+	if (!Policy)
+	{
+		UE_LOG(LogTemp, Error, TEXT("Policy is nullptr."));
+		return;
+	}
+	if (!Policy->GetPolicyNetworkAsset()->NeuralNetworkData)
+	{	
+		UE_LOG(LogTemp, Error, TEXT("NeuralNetworkData가 비정상입니다."));
+	}
+	else{
+		UE_LOG(LogTemp, Log, TEXT("  InputSize = %d"), Policy->GetPolicyNetworkAsset()->NeuralNetworkData->GetInputSize());
+		UE_LOG(LogTemp, Log, TEXT("  OutputSize = %d"), Policy->GetPolicyNetworkAsset()->NeuralNetworkData->GetOutputSize());
+		UE_LOG(LogTemp, Log, TEXT("  SnapshotByteNum = %d"), Policy->GetPolicyNetworkAsset()->NeuralNetworkData->GetSnapshotByteNum());
+	}
+	
 
 	// Make Critic
 	Critic = ULearningAgentsCritic::MakeCritic(
@@ -85,10 +120,20 @@ void AMyLearningManager::BeginPlay()
 		Reinitialize,
 		CriticSettings
 	);
+	if (!Critic)
+	{
+		UE_LOG(LogTemp, Error, TEXT("Critic is nullptr."));
+		return;
+	}
 
 	// Make TrainingEnvironment
 	TrainingEnv = ULearningAgentsTrainingEnvironment::MakeTrainingEnvironment(
 		LearningAgentsManager, UMyLearningAgentsEnv::StaticClass());
+	if (!TrainingEnv)
+	{
+		UE_LOG(LogTemp, Error, TEXT("TrainingEnv is nullptr."));
+		return;
+	}
 	
 	// Make Communicator
 	FLearningAgentsTrainerProcess TrainerProcess = 
@@ -112,6 +157,11 @@ void AMyLearningManager::BeginPlay()
 		TEXT("PPOTrainer"),
 		PPOTrainerSettings
 	);
+	if (!PPOTrainer)
+	{
+		UE_LOG(LogTemp, Error, TEXT("PPOTrainer is nullptr."));
+		return;
+	}
 }
 
 // Called every frame
@@ -128,6 +178,4 @@ void AMyLearningManager::Tick(float DeltaTime)
 		PPOTrainer->RunTraining(
 			PPOTrainingSettings, TrainingGameSettings, true, true);
 	}
-
 }
-

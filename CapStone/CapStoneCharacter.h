@@ -192,10 +192,17 @@ private:
 	float MoveAmount = 1.f;
 	float MaxRange = 1.f;
 	float Damage = 10.f;
-	float ResetDistance = 500.f;
+	float ResetDistance = 800.f;
+	float MaxRadius = 400.f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"), Category = TeamNumber)
 	int32 TeamID = 0;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"), Category = ManagerTag)
+	FName ManagerTag;
+	bool FoundManager = false;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"), Category = OriginTag)
+	FName OriginTag;
+	FVector OriginLocation = FVector::ZeroVector;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
 	bool IsDead = false;
@@ -204,7 +211,7 @@ private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
 	int32 Stamina = 0;
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
-	int32 MaxStamina = 20000;
+	int32 MaxStamina = 10000;
 
 	// 얘네들 c++에서 생성하려면 에디터 완전히 닫고 컴파일, 빌드 해야 함
 	UPROPERTY(EditDefaultsOnly, Category = "Weapon")

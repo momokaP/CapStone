@@ -16,6 +16,7 @@
 #include "Engine/DamageEvents.h"
 #include "Kismet/GameplayStatics.h"
 #include "Math/UnrealMathUtility.h"
+#include "LearningAgentsManager.h"
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 
@@ -391,6 +392,42 @@ void ACapStoneCharacter::BeginPlay()
 		UE_LOG(LogTemp, Error, TEXT("HandLeft is invalid or not an Actor class"));
 	}
 
+	TArray<AActor*> Managers;
+	UGameplayStatics::GetAllActorsWithTag(
+		GetWorld(), ManagerTag, Managers
+	);
+	for (AActor* Actor : Managers)
+    {
+        ULearningAgentsManager* Manager = 
+		Cast<ULearningAgentsManager>(Actor->GetComponentByClass(ULearningAgentsManager::StaticClass()));
+		if (Manager)
+		{
+			Manager->AddAgent(this);
+			FoundManager = true;
+		}
+    }
+	if(!FoundManager)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Could not find Learning Agents manager."));
+	}
+
+	TArray<AActor*> Origins;
+	UGameplayStatics::GetAllActorsWithTag(
+		GetWorld(), OriginTag, Origins
+	);
+	float Distance = 10000.0f;
+	AActor* NearestOrigin = 
+	UGameplayStatics::FindNearestActor(GetActorLocation(), Origins, Distance);
+	if (NearestOrigin)
+	{
+		OriginLocation = NearestOrigin->GetActorLocation();
+		UE_LOG(LogTemp, Warning, TEXT("OriginLocation: %s"), *OriginLocation.ToString());
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("No nearby origin found within %.2f units"), Distance);
+	}
+
 	InitSimulatePhysics();
 	InitPointHandle();
 
@@ -616,11 +653,15 @@ void ACapStoneCharacter::RLResetCharacter()
 	{
 		return;
 	}
-
+	if(OriginLocation == FVector::ZeroVector)
+	{
+		return;
+	}
+	
 	GetMesh()->SetSimulatePhysics(false);
 
 	float RandomRadian = FMath::FRandRange(0.f, 6.28f);
-	float RandomDistance = FMath::FRandRange(0.1f, 1.f) * ResetDistance;
+	float RandomDistance = FMath::FRandRange(0.5f, 1.f) * ResetDistance;
 
 	float ResetLocationX = 
 	EnemyLocation[0].X + FMath::Cos(RandomRadian) * RandomDistance;
@@ -628,6 +669,21 @@ void ACapStoneCharacter::RLResetCharacter()
 	EnemyLocation[0].Y + FMath::Sin(RandomRadian) * RandomDistance;
 	FVector ResetLocation = 
 	FVector(ResetLocationX, ResetLocationY, EnemyLocation[0].Z);
+	
+	// Origin 기준 거리 계산
+	FVector Direction = ResetLocation - OriginLocation;
+	float Distance = Direction.Size();
+	if (Distance > MaxRadius)
+	{
+		// Direction = Direction.GetSafeNormal();
+		// ResetLocation = OriginLocation + Direction * MaxRadius;
+
+		FVector2D XYDirection = FVector2D(Direction.X, Direction.Y).GetSafeNormal();
+		FVector2D OppositeXY = -XYDirection * MaxRadius;
+		ResetLocation = FVector(OriginLocation.X + OppositeXY.X,
+								OriginLocation.Y + OppositeXY.Y,
+								ResetLocation.Z); 
+	}
 
 	SetActorLocation(ResetLocation, false, nullptr, ETeleportType::TeleportPhysics);
 
