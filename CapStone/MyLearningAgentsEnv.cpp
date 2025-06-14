@@ -16,9 +16,8 @@ void UMyLearningAgentsEnv::GatherAgentReward_Implementation(
     ACapStoneCharacter* RewardCharacter = Cast<ACapStoneCharacter>(RewardActor);
     if (RewardCharacter)
     {
-        float HitReward = ULearningAgentsRewards::MakeRewardOnCondition(
-            RewardCharacter->IsHit(), 10.0f);
-        
+        // 기본 reward
+        // 적과의 거리 reward
         FVector MyLocation = RewardCharacter->GetActorLocation();
         const TArray<FVector>& EnemyLocations = RewardCharacter->GetEnemyLocation();
         if(EnemyLocations.Num() <= 0)
@@ -27,8 +26,34 @@ void UMyLearningAgentsEnv::GatherAgentReward_Implementation(
         }
         float DistanceReward = ULearningAgentsRewards::MakeRewardFromLocationSimilarity(
             MyLocation, EnemyLocations[0], 100.0f, 1.0f);
+
+        // 적 죽음 reward
+        const TArray<ACapStoneCharacter*>& Enemies = RewardCharacter->GetEnemyCharacters();
+        if(Enemies.Num() <= 0)
+        {
+            return;
+        }
+        float EnemyDeadReward = ULearningAgentsRewards::MakeRewardOnCondition(
+            Enemies[0]->GetIsDead(), 100.0f);
+        // 적 타격 reward
+        float HitReward = ULearningAgentsRewards::MakeRewardOnCondition(
+            RewardCharacter->IsHit(), 10.0f);
+
+        // custom 조절 reward
+        float EnemyHealthReward = ULearningAgentsRewards::MakeReward(
+            1-Enemies[0]->GetHealth()/Enemies[0]->GetMaxHealth(),
+            RewardCharacter->GetEHRScale() 
+        );
+        float MyHealthReward = ULearningAgentsRewards::MakeReward(
+            RewardCharacter->GetHealth()/RewardCharacter->GetMaxHealth(),
+            RewardCharacter->GetMHRScale()
+        );
+        float StaminaReward = ULearningAgentsRewards::MakeReward(
+            RewardCharacter->GetStamina()/RewardCharacter->GetMaxStamina(),
+            RewardCharacter->GetSRScale()
+        );
     
-        OutReward = HitReward + DistanceReward;
+        OutReward = DistanceReward + EnemyDeadReward + HitReward + EnemyHealthReward + MyHealthReward + StaminaReward;
     }
 }
 
@@ -61,7 +86,7 @@ void UMyLearningAgentsEnv::GatherAgentCompletion_Implementation(
         }
         ELearningAgentsCompletion DistanceCompletion = 
         ULearningAgentsCompletions::MakeCompletionOnLocationDifferenceAboveThreshold(
-            MyLocation, EnemyLocations[0], 600.f);
+            MyLocation, EnemyLocations[0], CompletionCharacter->GetMaxEnemyDistance());
 
         OutCompletion = 
         ULearningAgentsCompletions::CompletionOr(

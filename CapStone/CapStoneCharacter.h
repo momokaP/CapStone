@@ -122,8 +122,15 @@ public:
 	bool IsHit() const;
 	void SetIsHit(bool bHit);
 
+	float GetMaxHealth() const { return MaxHealth; }
 	float GetHealth() const { return Health; }
 	void SetHealth(float NewHealth) { Health = FMath::Clamp(NewHealth, 0.f, 100.f); }
+
+	float GetMaxEnemyDistance() const { return MaxEnemyDistance; }
+
+	float GetEHRScale() const { return EnemyHealthRewardScale; }
+	float GetMHRScale() const { return MyHealthRewardScale; }
+	float GetSRScale() const { return StaminaRewardScale; }
 
 protected:
 	void ResetHitState();
@@ -194,6 +201,11 @@ private:
 	float Damage = 10.f;
 	float ResetDistance = 800.f;
 	float MaxRadius = 400.f;
+	float MaxEnemyDistance = 600.f;
+
+	float EnemyHealthRewardScale = 1.0f; 
+	float MyHealthRewardScale = 1.0f;
+	float StaminaRewardScale = 1.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"), Category = TeamNumber)
 	int32 TeamID = 0;
@@ -204,14 +216,17 @@ private:
 	FName OriginTag;
 	FVector OriginLocation = FVector::ZeroVector;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
+	bool IsTraining = true;
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
 	bool IsDead = false;
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
 	float Health = 100.f;
+	float MaxHealth = 100.f;
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
 	int32 Stamina = 0;
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
-	int32 MaxStamina = 10000;
+	int32 MaxStamina = 5000;
 
 	// 얘네들 c++에서 생성하려면 에디터 완전히 닫고 컴파일, 빌드 해야 함
 	UPROPERTY(EditDefaultsOnly, Category = "Weapon")

@@ -324,23 +324,48 @@ void ACapStoneCharacter::MakeEnemyInformation()
 	EnemyLocation.Empty();
 	EnemyDirection.Empty();
 
-	TArray<AActor*> Enemy;
+	TArray<AActor*> EnemyActors;
 	UGameplayStatics::GetAllActorsOfClass(
-		GetWorld(), ACapStoneCharacter::StaticClass(), Enemy);
+		GetWorld(), ACapStoneCharacter::StaticClass(), EnemyActors);
 
-	for (AActor* Actor : Enemy)
-    {
-        ACapStoneCharacter* OtherChar = Cast<ACapStoneCharacter>(Actor);
-        if (OtherChar && OtherChar != this)
-        {
-            if (OtherChar->TeamID != this->TeamID)
-            {
-				EnemyCharacters.Add(OtherChar);
-				EnemyLocation.Add(OtherChar->GetActorLocation());
-				EnemyDirection.Add(OtherChar->GetActorForwardVector());
-			}
-        }
-    }
+	struct FEnemyInfo
+	{
+		ACapStoneCharacter* EnemyChar;
+		FVector Location;
+		FVector Direction;
+		float Distance;
+
+		FEnemyInfo(ACapStoneCharacter* InChar, const FVector& InLoc, const FVector& InDir, float InDist)
+			: EnemyChar(InChar), Location(InLoc), Direction(InDir), Distance(InDist) {}
+	};
+
+	TArray<FEnemyInfo> EnemyInfoList;
+
+	for (AActor* Actor : EnemyActors)
+	{
+		ACapStoneCharacter* OtherChar = Cast<ACapStoneCharacter>(Actor);
+		if (OtherChar && OtherChar != this && OtherChar->TeamID != this->TeamID)
+		{
+			FVector Location = OtherChar->GetActorLocation();
+			float Distance = FVector::Dist(GetActorLocation(), Location);
+
+			EnemyInfoList.Add(FEnemyInfo(OtherChar, Location, OtherChar->GetActorForwardVector(), Distance));
+		}
+	}
+
+	// 거리 기준으로 정렬 (오름차순)
+	EnemyInfoList.Sort([](const FEnemyInfo& A, const FEnemyInfo& B)
+	{
+		return A.Distance < B.Distance;
+	});
+
+	// 정렬된 정보 복사
+	for (const FEnemyInfo& Info : EnemyInfoList)
+	{
+		EnemyCharacters.Add(Info.EnemyChar);
+		EnemyLocation.Add(Info.Location);
+		EnemyDirection.Add(Info.Direction);
+	}
 }
 
 void ACapStoneCharacter::BeginPlay()
@@ -392,6 +417,7 @@ void ACapStoneCharacter::BeginPlay()
 		UE_LOG(LogTemp, Error, TEXT("HandLeft is invalid or not an Actor class"));
 	}
 
+	// LearningAgentsManager 찾기
 	TArray<AActor*> Managers;
 	UGameplayStatics::GetAllActorsWithTag(
 		GetWorld(), ManagerTag, Managers
@@ -411,6 +437,7 @@ void ACapStoneCharacter::BeginPlay()
 		UE_LOG(LogTemp, Warning, TEXT("Could not find Learning Agents manager."));
 	}
 
+	// Origin 찾기
 	TArray<AActor*> Origins;
 	UGameplayStatics::GetAllActorsWithTag(
 		GetWorld(), OriginTag, Origins
@@ -434,7 +461,10 @@ void ACapStoneCharacter::BeginPlay()
     CalculateMaxRange();
 
     MakeEnemyInformation();
-	RLResetCharacter();
+	if(IsTraining)
+	{
+		RLResetCharacter();
+	}
 }
 
 void ACapStoneCharacter::CalculateMaxRange()
@@ -596,10 +626,10 @@ void ACapStoneCharacter::OnMeshHit(UPrimitiveComponent* HitComp, AActor* OtherAc
 			}
 
 			UE_LOG(LogTemp, Warning, TEXT("=== OnMeshHit Called ==="));
-			UE_LOG(LogTemp, Warning, TEXT("HitComp: %s"), *HitComp->GetName());
-			UE_LOG(LogTemp, Warning, TEXT("OtherActor: %s"), *OtherActor->GetName());
-			UE_LOG(LogTemp, Warning, TEXT("Hit BoneName: %s"), *Hit.BoneName.ToString());
-			UE_LOG(LogTemp, Warning, TEXT("Hit Actor: %s"), *GetNameSafe(Hit.GetActor()));
+			// UE_LOG(LogTemp, Warning, TEXT("HitComp: %s"), *HitComp->GetName());
+			// UE_LOG(LogTemp, Warning, TEXT("OtherActor: %s"), *OtherActor->GetName());
+			// UE_LOG(LogTemp, Warning, TEXT("Hit BoneName: %s"), *Hit.BoneName.ToString());
+			// UE_LOG(LogTemp, Warning, TEXT("Hit Actor: %s"), *GetNameSafe(Hit.GetActor()));
 			// UE_LOG(LogTemp, Warning, TEXT("Hit !!!!!"));
 			// UE_LOG(LogTemp, Warning, TEXT("BoneName: %s"), *GetMesh()->FindClosestBone(Hit.ImpactPoint).ToString());
 			
@@ -642,6 +672,16 @@ float ACapStoneCharacter::TakeDamage(float DamageAmount, struct FDamageEvent con
 	{
 		IsDead = true;
 		UE_LOG(LogTemp, Warning, TEXT("Dead"));
+
+		if(!IsTraining){
+			GetMesh()->SetSimulatePhysics(true);
+			GetMesh()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+			GetMesh()->SetCollisionObjectType(ECollisionChannel::ECC_PhysicsBody);
+			GetMesh()->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Block);
+			GetMesh()->SetCollisionResponseToChannel(ECC_Pawn, ECollisionResponse::ECR_Ignore);
+			GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+			GetMesh()->WakeAllRigidBodies();
+		}
 	}
 
 	return DamageToApplied;
@@ -673,6 +713,7 @@ void ACapStoneCharacter::RLResetCharacter()
 	// Origin 기준 거리 계산
 	FVector Direction = ResetLocation - OriginLocation;
 	float Distance = Direction.Size();
+	// ResetLocation이 Origin으로부터 너무 멀면 반대편으로 보정
 	if (Distance > MaxRadius)
 	{
 		// Direction = Direction.GetSafeNormal();
@@ -683,6 +724,16 @@ void ACapStoneCharacter::RLResetCharacter()
 		ResetLocation = FVector(OriginLocation.X + OppositeXY.X,
 								OriginLocation.Y + OppositeXY.Y,
 								ResetLocation.Z); 
+	}
+
+	// Enemy와의 거리가 너무 떨어져 있으면 Enemy 방향으로 캐릭터를 위치시킨다
+	float EnemyDistance = FVector::Dist(ResetLocation, EnemyLocation[0]);
+	if (EnemyDistance > MaxEnemyDistance)
+	{
+		FVector ToEnemy = (EnemyLocation[0] - ResetLocation).GetSafeNormal();
+		float PullAmount = EnemyDistance - MaxEnemyDistance + 100.f;
+
+		ResetLocation += ToEnemy * PullAmount;
 	}
 
 	SetActorLocation(ResetLocation, false, nullptr, ETeleportType::TeleportPhysics);
